@@ -1,11 +1,14 @@
 from abc import ABC, abstractmethod
 
 import os
+import pytorch_lightning as pl
 from itertools import chain, combinations
 
 
-class BaseExperiment(ABC):
+class BaseExperiment(ABC, pl.LightningModule):
     def __init__(self, flags):
+        super(BaseExperiment, self).__init__()
+
         self.flags = flags
         self.name = flags.dataset
 
@@ -94,3 +97,6 @@ class BaseExperiment(ABC):
             paths[name] = os.path.join(dir_cond, name)
         print(paths.keys())
         return paths
+
+    def forward(self, x):
+        return self.mm_vae(x)

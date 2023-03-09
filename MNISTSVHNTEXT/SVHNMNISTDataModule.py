@@ -17,12 +17,14 @@ BATCH_SIZE = 256
 class SVHNMNISTDataModule(pl.LightningDataModule):
     def __init__(self, flags, alphabet):
         super(SVHNMNISTDataModule, self).__init__()
+        self.test = None
         self.flags = flags
         self.val = None
         self.train = None
         self.alphabet = alphabet
         self.dataset_test = None
         self.dataset_train = None
+        self.dataset_val = None
         self.transform_mnist = transforms.Compose([transforms.ToTensor(),
                                                    transforms.ToPILImage(),
                                                    transforms.Resize(size=(28, 28), interpolation=Image.BICUBIC),
@@ -32,14 +34,14 @@ class SVHNMNISTDataModule(pl.LightningDataModule):
     def setup(self):
         transforms = [self.transform_mnist, self.transform_svhn]
         svhnmnist = SVHNMNIST(self.flags,
-                          self.alphabet,
-                          train=True,
-                          transform=transforms)
+                              self.alphabet,
+                              train=True,
+                              transform=transforms)
         self.train, self.val = random_split(svhnmnist, [55000, 5000])
         self.test = SVHNMNIST(self.flags,
-                         self.alphabet,
-                         train=False,
-                         transform=transforms)
+                              self.alphabet,
+                              train=False,
+                              transform=transforms)
         self.dataset_train = self.train
         self.dataset_val = self.val
         self.dataset_test = self.test
