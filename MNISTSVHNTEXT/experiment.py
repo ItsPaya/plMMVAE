@@ -45,7 +45,6 @@ class MNISTSVHNText(BaseExperiment, ABC):
         self.dataset_train = None
         self.dataset_val = None
         self.dataset_test = None
-        self.set_dataset()
 
         self.mm_vae = self.set_model()
         self.clfs = self.set_clfs()
