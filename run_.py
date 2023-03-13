@@ -26,6 +26,8 @@ from utils import utils
 # from utils.TBLogger import TBLogger
 
 # global variables
+from utils.TBlogger import TBLogger
+
 SEED = None
 SAMPLE1 = None
 if SEED is not None:
