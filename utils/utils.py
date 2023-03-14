@@ -16,7 +16,7 @@ from torchvision.transforms import Compose, ToTensor
 from sklearn.metrics import confusion_matrix
 from sklearn.utils.multiclass import unique_labels
 
-import text as text
+import utils.text
 
 
 # Print iterations progress

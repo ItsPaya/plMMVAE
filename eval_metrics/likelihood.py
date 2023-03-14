@@ -7,7 +7,7 @@ import torch
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
 
-from utils import utils
+import utils.utils
 from utils.likelihood import log_mean_exp
 from utils.likelihood import gaussian_log_pdf
 from utils.likelihood import unit_gaussian_log_pdf

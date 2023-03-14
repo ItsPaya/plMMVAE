@@ -12,7 +12,8 @@ from divergence_measures.mm_div import poe
 
 import pytorch_lightning as pl
 
-import utils
+import utils.utils
+from utils.utils import reweight_weights
 
 
 class BaseMMVae(ABC, pl.LightningModule):
@@ -42,7 +43,8 @@ class BaseMMVae(ABC, pl.LightningModule):
         return eps.mul(std).add_(mu)
 
     def set_fusion_functions(self):
-        weights = utils.reweight_weights(torch.Tensor(self.flags.alpha_modalities))
+        weights = reweight_weights(torch.Tensor(self.flags.alpha_modalities))
+        weights = weights
         # not sure if needed since originaly: self.weights = weights.to(self.flags.device)
 
         if self.flags.modality_moe:

@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from ConvNetTextMNIST import FeatureEncText
+from MNISTSVHNTEXT.ConvNetTextMNIST import FeatureEncText
 
 
 # Residual block

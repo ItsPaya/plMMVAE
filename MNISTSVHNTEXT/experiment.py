@@ -18,15 +18,15 @@ from modalities.MNIST import MNIST
 from modalities.SVHN import SVHN
 from modalities.Text import Text
 
-from SVHNMNISTDataset import SVHNMNIST
-from VAEtrimodalSVHNMNIST import VAEtrimodalSVHNMNIST
-from ConvNetImgClfMNIST import ClfImg as ClfImgMNIST
-from ConvNetImgClfSVHN import ClfImgSVHN
-from ConvNetTextClf import ClfText as ClfText
+from MNISTSVHNTEXT.SVHNMNISTDataset import SVHNMNIST
+from MNISTSVHNTEXT.VAEtrimodalSVHNMNIST import VAEtrimodalSVHNMNIST
+from MNISTSVHNTEXT.ConvNetImgClfMNIST import ClfImg as ClfImgMNIST
+from MNISTSVHNTEXT.ConvNetImgClfSVHN import ClfImgSVHN
+from MNISTSVHNTEXT.ConvNetTextClf import ClfText as ClfText
 
-from ConvNetImgMNIST import EncoderImg, DecoderImg
-from ConvNetImgSVHN import EncoderSVHN, DecoderSVHN
-from ConvNetTextMNIST import EncoderText, DecoderText
+from MNISTSVHNTEXT.ConvNetImgMNIST import EncoderImg, DecoderImg
+from MNISTSVHNTEXT.ConvNetImgSVHN import EncoderSVHN, DecoderSVHN
+from MNISTSVHNTEXT.ConvNetTextMNIST import EncoderText, DecoderText
 
 from utils.BaseExperiment import BaseExperiment
 

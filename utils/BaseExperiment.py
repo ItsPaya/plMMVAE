@@ -35,17 +35,17 @@ class BaseExperiment(ABC, pl.LightningModule):
     def set_modalities(self):
         pass
 
-    @abstractmethod
-    def set_dataset(self):
-        pass
+    # @abstractmethod
+    # def set_dataset(self):
+        # pass
 
     @abstractmethod
     def set_clfs(self):
         pass
 
-    @abstractmethod
-    def set_optimizer(self):
-        pass
+    # @abstractmethod
+    # def set_optimizer(self):
+        # pass
 
     @abstractmethod
     def set_rec_weights(self):
