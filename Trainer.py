@@ -54,6 +54,7 @@ if __name__ == '__main__':
     alphabet_path = os.path.join(os.getcwd(), 'alphabet.json')
     with open(alphabet_path) as alphabet_file:
         alphabet = str(''.join(json.load(alphabet_file)))
+    # need to rewrite the experiment and run epoch part
     mst = MNISTSVHNText(FLAGS, alphabet)
     create_dir_structure_testing(mst)
 

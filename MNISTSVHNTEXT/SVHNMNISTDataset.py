@@ -1,4 +1,3 @@
-
 import sys
 import random
 
@@ -13,9 +12,7 @@ import gzip
 import numpy as np
 import torch
 import codecs
-import pytorch_lightning as pl
 
-from torch.utils.data import DataLoader
 from utils.text import one_hot_encode
 from utils.text import create_text_from_label_mnist
 from utils.text import char2Index
@@ -120,7 +117,7 @@ class SVHNMNIST(VisionDataset):
         warnings.warn("test_data has been renamed data")
         return self.data_mnist
 
-    def __init__(self, flags,  alphabet, train=True, transform=None, target_transform=None):
+    def __init__(self, flags, alphabet, train=True, transform=None, target_transform=None):
         super(SVHNMNIST, self).__init__(flags.dir_data)
         self.flags = flags
         self.dataset = 'MNIST_SVHN'

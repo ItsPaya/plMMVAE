@@ -45,9 +45,11 @@ class MNISTSVHNText(BaseExperiment, ABC):
         self.dataset_train = None
         self.dataset_val = None
         self.dataset_test = None
+        self.set_dataset()
 
         self.mm_vae = self.set_model()
         self.clfs = self.set_clfs()
+        self.optimizer = None
         self.rec_weights = self.set_rec_weights()
         self.style_weights = self.set_style_weights()
 
@@ -60,12 +62,6 @@ class MNISTSVHNText(BaseExperiment, ABC):
     def set_model(self):
         model = VAEtrimodalSVHNMNIST(self.flags, self.modalities, self.subsets)
         return model
-
-    def training_step(self, batch, batch_idx):
-        pass
-
-    def validation_step(self, batch, batch_idx):
-        pass
 
     def set_modalities(self):
         mod1 = MNIST('mnist', EncoderImg(self.flags), DecoderImg(self.flags),
