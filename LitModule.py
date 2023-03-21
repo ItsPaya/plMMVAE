@@ -2,15 +2,17 @@ import torch
 import torch.nn as nn
 import pytorch_lightning as pl
 from torch import optim
+
 from MNISTSVHNTEXT import VAEtrimodalSVHNMNIST
+from utils.BaseMMVae import BaseMMVae
 
 
-class LitModule(VAEtrimodalSVHNMNIST, pl.LightningModule):
-    def __init__(self):
-        super(LitModule, self).__init__()
+class LitModule(BaseMMVae):
+    def __init__(self, flags, modalities, subsets):
+        super().__init__(flags, modalities, subsets)
 
-    def forward(self, x):
-        return LitModule(x)
+    # def forward(self, x):
+        # return
 
     def training_step(self, batch, batch_idx):
         latents = self.inference(batch)

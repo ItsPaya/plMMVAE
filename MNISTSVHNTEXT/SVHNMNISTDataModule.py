@@ -1,10 +1,11 @@
 import os
 
+import PIL.Image
 import torch
 import torch.nn as nn
 import pytorch_lightning as pl
 import torch.nn.functional as f
-from PIL.Image import Image
+from PIL.Image import Image as Image
 
 from torch.utils.data import DataLoader, Dataset, random_split
 from torchvision import transforms as transforms
@@ -27,11 +28,11 @@ class SVHNMNISTDataModule(pl.LightningDataModule):
         self.dataset_val = None
         self.transform_mnist = transforms.Compose([transforms.ToTensor(),
                                                    transforms.ToPILImage(),
-                                                   transforms.Resize(size=(28, 28), interpolation=Image.BICUBIC),
+                                                   transforms.Resize(size=(28, 28), interpolation=PIL.Image.BICUBIC),
                                                    transforms.ToTensor()])
         self.transform_svhn = transforms.Compose([transforms.ToTensor()])
 
-    def setup(self):
+    def setup(self, stage=None):
         transforms = [self.transform_mnist, self.transform_svhn]
         svhnmnist = SVHNMNIST(self.flags,
                               self.alphabet,

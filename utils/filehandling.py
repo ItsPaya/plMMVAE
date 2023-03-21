@@ -18,13 +18,21 @@ def get_str_experiments(flags):
     return str_experiments
 
 
-def create_dir_structure_testing(exp):
-    flags = exp.flags
-    for k, label_str in enumerate(exp.labels):
+def create_dir_structure_testing(flags, labels):
+    for k, label_str in enumerate(labels):
         dir_gen_eval_label = os.path.join(flags.dir_gen_eval, label_str)
         create_dir(dir_gen_eval_label)
         dir_inference_label = os.path.join(flags.dir_inference, label_str)
         create_dir(dir_inference_label)
+
+
+# def create_dir_structure_testing(exp):
+    # flags = exp.flags
+    # for k, label_str in enumerate(exp.labels):
+        # dir_gen_eval_label = os.path.join(flags.dir_gen_eval, label_str)
+        # create_dir(dir_gen_eval_label)
+        # dir_inference_label = os.path.join(flags.dir_inference, label_str)
+        # create_dir(dir_inference_label)
 
 
 def create_dir_structure(flags, train=True):
