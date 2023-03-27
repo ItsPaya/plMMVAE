@@ -16,16 +16,16 @@ from PIL import ImageFont
 from modalities.CMNIST import CMNIST
 
 # from mnistsvhntext.SVHNMNISTDataset import SVHNMNIST
-from mmnist.MMNISTDataset import MMNISTDataset
+from MMNISTDataset import MMNISTDataset
 
 # from mmnist.networks.VAEtrimodalSVHNMNIST import VAEtrimodalSVHNMNIST
-from mmnist.networks.VAEMMNIST import VAEMMNIST
+from VAEMMNIST import VAEMMNIST
 
 # from mmnist.networks.ConvNetworkImgClfSVHN import ClfImgSVHN
 # from mmnist.networks.ConvNetworkTextClf import ClfText as ClfText
-from mmnist.networks.ConvNetworkImgClfCMNIST import ClfImg as ClfImgCMNIST
+from ConvNetworkImgClfCMNIST import ClfImg as ClfImgCMNIST
 
-from mmnist.networks.ConvNetworksImgCMNIST import EncoderImg, DecoderImg
+from ConvNetworksImgCMNIST import EncoderImg, DecoderImg
 # from mmnist.networks.ConvNetworksImgSVHN import EncoderSVHN, DecoderSVHN
 # from mmnist.networks.ConvNetworksTextMNIST import EncoderText, DecoderText
 
@@ -97,7 +97,7 @@ class MMNISTExperiment(BaseExperiment):
     def set_optimizer(self):
         # optimizer definition
         total_params = sum(p.numel() for p in self.mm_vae.parameters())
-        params = list(self.mm_vae.parameters());
+        params = list(self.mm_vae.parameters())
         print('num parameters: ' + str(total_params))
         optimizer = optim.Adam(params,
                                lr=self.flags.initial_learning_rate,
