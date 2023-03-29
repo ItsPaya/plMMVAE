@@ -1,4 +1,13 @@
 #!/usr/bin/env bash
+
+#SBATCH --job-name=mnisttextsvhn
+#SBATCH --output=mnisttextsvhn.output_%j.txt
+#SBATCH --cpus-per-task=4
+#SBATCH --time=07:00:00
+#SBATCH --mem-per-cpu=4G
+#SBATCH -p gpu
+#SBATCH --gres=gpu:1
+
 set -eo pipefail
 shopt -s nullglob globstar
 

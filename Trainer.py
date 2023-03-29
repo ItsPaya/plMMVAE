@@ -155,8 +155,8 @@ def set_paths_fid():
 
 if __name__ == '__main__':
     FLAGS = parser.parse_args()
-    use_cuda = torch.cuda.is_available()
-    FLAGS.device = torch.device('cuda' if use_cuda else 'cpu')
+    # use_cuda = torch.cuda.is_available()
+    # FLAGS.device = torch.device('cuda' if use_cuda else 'cpu')
 
     if FLAGS.method == 'poe':
         FLAGS.modality_poe = True
@@ -184,7 +184,7 @@ if __name__ == '__main__':
     # need to rewrite the experiment setup and run epoch part (mainly basic_epoch_routine)
     # basic epoch routine left to implement
     plot_img_size = torch.Size((3, 28, 28))
-    font = ImageFont.truetype('FreeSerif.ttf', 38)
+    font = ImageFont.truetype('FreeSerif.ttf', 38) # seems to cause problems
     FLAGS.num_features = len(alphabet)
     modalities = set_modalities()
     num_modalities = len(modalities.keys())
