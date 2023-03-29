@@ -38,7 +38,7 @@ class SVHNMNISTDataModule(pl.LightningDataModule):
                               self.alphabet,
                               train=True,
                               transform=transforms)
-        self.train, self.val = random_split(svhnmnist, [55000, 5000])
+        self.train, self.val = random_split(svhnmnist)
         self.test = SVHNMNIST(self.flags,
                               self.alphabet,
                               train=False,
