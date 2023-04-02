@@ -157,7 +157,7 @@ class BaseMMVae(ABC, pl.LightningModule):
         results_rec = dict()
         enc_mods = latents['modalities']
         for m, m_key in enumerate(self.modalities.keys()):
-            if m_key in input_batch.keys():
+            if m < len(input_batch) and m_key in input_batch[m]:
                 m_s_mu, m_s_logvar = enc_mods[m_key + '_style']
                 if self.flags.factorized_representation:
                     m_s_embeddings = self.reparameterize(mu=m_s_mu, logvar=m_s_logvar)
@@ -172,8 +172,8 @@ class BaseMMVae(ABC, pl.LightningModule):
     def encode(self, input_batch):
         latents = dict()
         for m, m_key in enumerate(self.modalities.keys()):
-            if m_key in input_batch.keys():
-                i_m = input_batch[m_key]
+            if m < len(input_batch) and m_key in input_batch[m]:
+                i_m = input_batch[m]
                 l = self.encoders[m_key](i_m)
                 latents[m_key + '_style'] = l[:2]
                 latents[m_key] = l[2:]
@@ -183,7 +183,7 @@ class BaseMMVae(ABC, pl.LightningModule):
 
         return latents
 
-    def inference(self, input_batch, num_samples):
+    def inference(self, input_batch, num_samples=None):
         if num_samples is None:
             num_samples = self.flags.batch_size
         latents = dict()
@@ -199,7 +199,7 @@ class BaseMMVae(ABC, pl.LightningModule):
                 logvars_subset = torch.Tensor()
                 mods_avail = True
                 for m, mod in enumerate(mods):
-                    if mod.name in input_batch.keys():
+                    if m < len(input_batch) and mod.name in input_batch[m]:
                         mus_subset = torch.cat((mus_subset, enc_mods[mod.name][0].unsqueeze(0)),
                                                dim=0)
                         logvars_subset = torch.cat((logvars_subset, enc_mods[mod.name][1].unsqueeze(0)),
@@ -218,7 +218,7 @@ class BaseMMVae(ABC, pl.LightningModule):
             mus = torch.cat((mus, torch.zeros(1, num_samples,
                                               self.flags.class_dim)), dim=0)
             logvars = torch.cat((logvars, torch.zeros(1, num_samples,
-                                                     self.flags.class_dim)), dim=0)
+                                                      self.flags.class_dim)), dim=0)
         weights = (1 / float(mus.shape[0])) * torch.ones(mus.shape[0])
         joint_mu, joint_logvar = self.moe_fusion(mus, logvars, weights)
         latents['mus'] = mus

@@ -65,7 +65,7 @@ if __name__ == '__main__':
     # For reproducibility
     seed_everything(config['exp_params']['manual_seed'], True)
 
-    model = vae_models[config['model_params']['name']](**config['model_params'])
+    # model = vae_models[config['model_params']['name']](**config['model_params'])
 
     trainer = pl.Trainer(devices=1, max_epochs=2, fast_dev_run=True, logger=tb_logger,
                          callbacks=[TQDMProgressBar(refresh_rate=20)])

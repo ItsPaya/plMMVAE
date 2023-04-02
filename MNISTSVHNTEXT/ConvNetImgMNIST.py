@@ -15,7 +15,7 @@ class EncoderImg(nn.Module):
         modules.extend([nn.Sequential(nn.Linear(self.hidden_dim, self.hidden_dim), nn.ReLU(True))
                         for _ in range(flags.num_hidden_layers - 1)])
         self.enc = nn.Sequential(*modules)
-        self.relu = nn.ReLU();
+        self.relu = nn.ReLU()
         if flags.factorized_representation:
             # style
             self.style_mu = nn.Linear(in_features=self.hidden_dim, out_features=flags.style_mnist_dim, bias=True)

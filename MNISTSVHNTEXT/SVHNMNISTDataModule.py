@@ -38,7 +38,9 @@ class SVHNMNISTDataModule(pl.LightningDataModule):
                               self.alphabet,
                               train=True,
                               transform=transforms)
-        self.train, self.val = random_split(svhnmnist)
+        print(len(svhnmnist))
+        train_split = int(.8 * len(svhnmnist))
+        self.train, self.val = random_split(svhnmnist, [train_split, (svhnmnist - train_split)])
         self.test = SVHNMNIST(self.flags,
                               self.alphabet,
                               train=False,
@@ -48,10 +50,10 @@ class SVHNMNISTDataModule(pl.LightningDataModule):
         self.dataset_test = self.test
 
     def train_dataloader(self):
-        return DataLoader(self.train, batch_size=BATCH_SIZE)
+        return DataLoader(self.dataset_train, batch_size=BATCH_SIZE, shuffle=True, num_workers=8, drop_last=True)
 
     def val_dataloader(self):
-        return DataLoader(self.val, batch_size=BATCH_SIZE)
+        return DataLoader(self.dataset_val, batch_size=BATCH_SIZE, num_workers=8, drop_last=True)
 
     def test_dataloader(self):
-        return DataLoader(self.test, batch_size=BATCH_SIZE)
+        return DataLoader(self.dataset_test, batch_size=BATCH_SIZE, shuffle=True, num_workers=8, drop_last=True)
