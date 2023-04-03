@@ -30,7 +30,7 @@ class LitModule(BaseMMVae):
         results_rec = dict()
         enc_mods = latents['modalities']
         for m, m_key in enumerate(self.modalities.keys()):
-            if m < len(batch):
+            if m_key in batch.keys():
                 m_s_mu, m_s_logvar = enc_mods[m_key + '_style']
                 if self.flags.factorized_representation:
                     m_s_embeddings = self.reparameterize(mu=m_s_mu, logvar=m_s_logvar)
@@ -43,7 +43,9 @@ class LitModule(BaseMMVae):
         return results
 
     def validation_step(self, batch, batch_idx):
-        latents = self.inference(batch)
+        batch_d = batch[0]
+        batch_l = batch[1]
+        latents = self.inference(batch_d)
         results = dict()
         results['latents'] = latents
         results['group_distr'] = latents['joint']
@@ -57,8 +59,8 @@ class LitModule(BaseMMVae):
 
         results_rec = dict()
         enc_mods = latents['modalities']
-        for m, m_key in enumerate(self.modalities.keys()):
-            if m < len(batch):
+        for m, m_key in enumerate(self.modalities.keys):
+            if m_key in batch.keys():
                 m_s_mu, m_s_logvar = enc_mods[m_key + '_style']
                 if self.flags.factorized_representation:
                     m_s_embeddings = self.reparameterize(mu=m_s_mu, logvar=m_s_logvar)

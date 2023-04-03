@@ -78,6 +78,7 @@ def calc_alphaJSD_modalities(flags, mus, logvars, weights, normalization=None):
             klds[k] = kld
         else:
             klds[k, :] = kld
+    klds = klds.to(flags.device)
     if normalization is None:
         weights = weights.unsqueeze(1).repeat(1, num_samples)
     group_div = (weights * klds).sum(dim=0)
@@ -91,7 +92,8 @@ def calc_group_divergence_moe(flags, mus, logvars, weights, normalization=None):
         klds = torch.zeros(num_mods)
     else:
         klds = torch.zeros(num_mods, num_samples)
-
+    klds = klds.to(flags.device)
+    weights = weights.to(flags.device)
     for k in range(0, num_mods):
         kld_ind = calc_kl_divergence(mus[k, :, :], logvars[k, :, :],
                                      norm_value=normalization)
@@ -109,7 +111,7 @@ def calc_group_divergence_poe(flags, mus, logvars, norm=None):
     num_mods = mus.shape[0]
     poe_mu, poe_logvar = poe(mus, logvars)
     kld_poe = calc_kl_divergence(poe_mu, poe_logvar, norm_value=norm)
-    klds = torch.zeros(num_mods)
+    klds = torch.zeros(num_mods).to(flags.device)
     for k in range(0, num_mods):
         kld_ind = calc_kl_divergence(mus[k, :, :], logvars[k, :, :],
                                      norm_value=norm)

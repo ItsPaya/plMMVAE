@@ -1,6 +1,7 @@
 import random
 from itertools import chain, combinations
 
+import PIL.Image
 import numpy as np
 import pytorch_lightning as pl
 from PIL import ImageFont
@@ -9,6 +10,7 @@ from pytorch_lightning.callbacks import TQDMProgressBar
 from sklearn.metrics import accuracy_score
 from tensorboardX import SummaryWriter
 from torch.utils.data import DataLoader
+from torchvision import transforms as transforms
 
 from MNISTSVHNTEXT.ConvNetImgMNIST import EncoderImg, DecoderImg
 from eval_metrics.coherence import test_generation
@@ -27,7 +29,7 @@ import torch
 
 from run_ import run_epochs
 from utils.TBlogger import TBLogger
-
+from pytorch_lightning.loggers import TensorBoardLogger
 from utils.filehandling import create_dir_structure
 from utils.filehandling import create_dir_structure_testing
 from MNISTSVHNTEXT.flags import parser
@@ -184,7 +186,7 @@ if __name__ == '__main__':
     # need to rewrite the experiment setup and run epoch part (mainly basic_epoch_routine)
     # basic epoch routine left to implement
     plot_img_size = torch.Size((3, 28, 28))
-    font = ImageFont.truetype('FreeSerif.ttf', 38) # seems to cause problems
+    font = ImageFont.truetype('FreeSerif.ttf', 38)  # seems to cause problems
     FLAGS.num_features = len(alphabet)
     modalities = set_modalities()
     num_modalities = len(modalities.keys())
@@ -204,15 +206,24 @@ if __name__ == '__main__':
 
     total_params = sum(p.numel() for p in mm_vae.parameters())
     print('num parameters model: ' + str(total_params))
-
+    transform_mnist = transforms.Compose([transforms.ToTensor(),
+                                          transforms.ToPILImage(),
+                                          transforms.Resize(size=(28, 28), interpolation=PIL.Image.BICUBIC),
+                                          transforms.ToTensor()])
+    transform_svhn = transforms.Compose([transforms.ToTensor()])
+    transform = [transform_mnist, transform_svhn]
+    train_set = SVHNMNIST(FLAGS, alphabet, train=True, transform=transform)
+    train = DataLoader(train_set, batch_size=FLAGS.batch_size,
+                       shuffle=True, num_workers=8, drop_last=True)
     dm = SVHNMNISTDataModule(FLAGS, alphabet)
     writer = SummaryWriter(mm_vae.flags.dir_logs)
     tb_logger = TBLogger(mm_vae.flags.str_experiment, writer)
+    logger2 = TensorBoardLogger("tb_logs", name="Lit_Model")
 
-    trainer = pl.Trainer(devices=1, max_epochs=10, fast_dev_run=True, logger=tb_logger,
-                         callbacks=[TQDMProgressBar(refresh_rate=20)])
+    trainer = Trainer(devices=1, max_epochs=10, fast_dev_run=True, logger=logger2,
+                      callbacks=[TQDMProgressBar(refresh_rate=20)])
 
-    trainer.fit(mm_vae, dm)
+    trainer.fit(mm_vae, train_dataloaders=train)
 
     result = trainer.test(mm_vae, dm)
 

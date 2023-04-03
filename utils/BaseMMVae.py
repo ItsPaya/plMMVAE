@@ -14,6 +14,7 @@ import pytorch_lightning as pl
 
 import utils.utils
 from utils.utils import reweight_weights
+from utils.utils import mixture_component_selection
 
 
 class BaseMMVae(ABC, pl.LightningModule):
@@ -69,7 +70,7 @@ class BaseMMVae(ABC, pl.LightningModule):
             weights = self.weights
 
         weights = weights.clone()
-        weights = utils.reweight_weights(weights)
+        weights = reweight_weights(weights)
         div_measures = calc_group_divergence_moe(self.flags,
                                                  mus,
                                                  logvars,
@@ -102,8 +103,8 @@ class BaseMMVae(ABC, pl.LightningModule):
         if weights is None:
             weights = self.weights
 
-        weights = utils.reweight_weights(weights)
-        mu_moe, logvar_moe = utils.mixture_component_selection(self.flags,
+        weights = reweight_weights(weights)
+        mu_moe, logvar_moe = mixture_component_selection(self.flags,
                                                                mus,
                                                                logvars,
                                                                weights)
@@ -115,10 +116,10 @@ class BaseMMVae(ABC, pl.LightningModule):
         if self.flags.modality_poe or mus.shape[0] == len(self.modalities.keys()):
             num_samples = mus[0].shape[0]
             mus = torch.cat((mus, torch.zeros(1, num_samples,
-                                              self.flags.class_dim)),
+                                              self.flags.class_dim).to(self.device)),
                             dim=0)
             logvars = torch.cat((logvars, torch.zeros(1, num_samples,
-                                                      self.flags.class_dim)),
+                                                      self.flags.class_dim).to(self.device)),
                                 dim=0)
         # mus = torch.cat(mus, dim=0);
         # logvars = torch.cat(logvars, dim=0);
@@ -157,7 +158,7 @@ class BaseMMVae(ABC, pl.LightningModule):
         results_rec = dict()
         enc_mods = latents['modalities']
         for m, m_key in enumerate(self.modalities.keys()):
-            if m < len(input_batch) and m_key in input_batch[m]:
+            if m_key in input_batch.keys():
                 m_s_mu, m_s_logvar = enc_mods[m_key + '_style']
                 if self.flags.factorized_representation:
                     m_s_embeddings = self.reparameterize(mu=m_s_mu, logvar=m_s_logvar)
@@ -172,8 +173,8 @@ class BaseMMVae(ABC, pl.LightningModule):
     def encode(self, input_batch):
         latents = dict()
         for m, m_key in enumerate(self.modalities.keys()):
-            if m < len(input_batch) and m_key in input_batch[m]:
-                i_m = input_batch[m]
+            if m_key in input_batch.keys():
+                i_m = input_batch[m_key]
                 l = self.encoders[m_key](i_m)
                 latents[m_key + '_style'] = l[:2]
                 latents[m_key] = l[2:]
@@ -189,17 +190,19 @@ class BaseMMVae(ABC, pl.LightningModule):
         latents = dict()
         enc_mods = self.encode(input_batch)
         latents['modalities'] = enc_mods
-        mus = torch.Tensor()
-        logvars = torch.Tensor()
+        mus = torch.Tensor().to(self.device)
+        logvars = torch.Tensor().to(self.device)
         distr_subsets = dict()
         for k, s_key in enumerate(self.subsets.keys()):
             if s_key != '':
                 mods = self.subsets[s_key]
                 mus_subset = torch.Tensor()
+                mus_subset = mus_subset.to(self.device)
                 logvars_subset = torch.Tensor()
+                logvars_subset = logvars_subset.to(self.device)
                 mods_avail = True
                 for m, mod in enumerate(mods):
-                    if m < len(input_batch) and mod.name in input_batch[m]:
+                    if mod.name in input_batch.keys():
                         mus_subset = torch.cat((mus_subset, enc_mods[mod.name][0].unsqueeze(0)),
                                                dim=0)
                         logvars_subset = torch.cat((logvars_subset, enc_mods[mod.name][1].unsqueeze(0)),
@@ -208,7 +211,7 @@ class BaseMMVae(ABC, pl.LightningModule):
                         mods_avail = False
                 if mods_avail:
                     weights_subset = ((1 / float(len(mus_subset))) *
-                                      torch.ones(len(mus_subset)))
+                                      torch.ones(len(mus_subset))).to(self.flags.device)
                     s_mu, s_logvar = self.modalitiy_fusion(mus_subset, logvars_subset, weights_subset)
                     distr_subsets[s_key] = [s_mu, s_logvar]
                     if self.fusion_condition(mods, input_batch):
@@ -216,10 +219,10 @@ class BaseMMVae(ABC, pl.LightningModule):
                         logvars = torch.cat((logvars, s_logvar.unsqueeze(0)), dim=0)
         if self.flags.modality_jsd:
             mus = torch.cat((mus, torch.zeros(1, num_samples,
-                                              self.flags.class_dim)), dim=0)
+                                              self.flags.class_dim).to(self.device)), dim=0)
             logvars = torch.cat((logvars, torch.zeros(1, num_samples,
-                                                      self.flags.class_dim)), dim=0)
-        weights = (1 / float(mus.shape[0])) * torch.ones(mus.shape[0])
+                                                      self.flags.class_dim).to(self.device)), dim=0)
+        weights = (1 / float(mus.shape[0])) * torch.ones(mus.shape[0]).to(self.device)
         joint_mu, joint_logvar = self.moe_fusion(mus, logvars, weights)
         latents['mus'] = mus
         latents['logvars'] = logvars
@@ -233,8 +236,8 @@ class BaseMMVae(ABC, pl.LightningModule):
         if num_samples is None:
             num_samples = self.flags.batch_size
         # need to handle this device calls
-        mu = torch.zeros(num_samples, self.flags.class_dim)
-        logvar = torch.zeros(num_samples, self.flags.class_dim)
+        mu = torch.zeros(num_samples, self.flags.class_dim).to(self.device)
+        logvar = torch.zeros(num_samples, self.flags.class_dim).to(self.device)
         z_class = self.reparameterize(mu, logvar)
         z_styles = self.get_random_styles(num_samples)
         random_latents = {'content': z_class, 'style': z_styles}
