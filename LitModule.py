@@ -60,7 +60,7 @@ class LitModule(BaseMMVae):
         results_rec = dict()
         enc_mods = latents['modalities']
         for m, m_key in enumerate(self.modalities.keys):
-            if m_key in batch.keys():
+            if m_key in batch_d.keys():
                 m_s_mu, m_s_logvar = enc_mods[m_key + '_style']
                 if self.flags.factorized_representation:
                     m_s_embeddings = self.reparameterize(mu=m_s_mu, logvar=m_s_logvar)

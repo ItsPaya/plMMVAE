@@ -1,15 +1,14 @@
-model_params:
-  name: 'Trimodal_VAE'
-  in_channels: 3
-  latent_dim: 128
-
-
 data_params:
-  data_path: "data/"
-  train_batch_size: 128
-  val_batch_size: 128
-  patch_size: 64
-  num_workers: 4
+  data_path: "./data"
+  batch_size: 256
+  modality_1:
+    mod_type: 'mnist'
+    decoder: DecoderImg
+    encoder: EncoderImg
+    class_dim: 20
+    style_dim:
+
+
 
 
 exp_params:

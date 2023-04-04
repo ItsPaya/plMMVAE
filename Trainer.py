@@ -206,104 +206,25 @@ if __name__ == '__main__':
 
     total_params = sum(p.numel() for p in mm_vae.parameters())
     print('num parameters model: ' + str(total_params))
-    transform_mnist = transforms.Compose([transforms.ToTensor(),
-                                          transforms.ToPILImage(),
-                                          transforms.Resize(size=(28, 28), interpolation=PIL.Image.BICUBIC),
-                                          transforms.ToTensor()])
-    transform_svhn = transforms.Compose([transforms.ToTensor()])
-    transform = [transform_mnist, transform_svhn]
-    train_set = SVHNMNIST(FLAGS, alphabet, train=True, transform=transform)
-    train = DataLoader(train_set, batch_size=FLAGS.batch_size,
-                       shuffle=True, num_workers=8, drop_last=True)
-    dm = SVHNMNISTDataModule(FLAGS, alphabet)
+    # transform_mnist = transforms.Compose([transforms.ToTensor(),
+    #                                    transforms.ToPILImage(),
+    #                                   transforms.Resize(size=(28, 28), interpolation=PIL.Image.BICUBIC),
+    #                                  transforms.ToTensor()])
+    # transform_svhn = transforms.Compose([transforms.ToTensor()])
+    # transform = [transform_mnist, transform_svhn]
+    # train_set = SVHNMNIST(FLAGS, alphabet, train=True, transform=transform)
+    # train = DataLoader(train_set, batch_size=FLAGS.batch_size,
+    #                  shuffle=True, num_workers=8, drop_last=True)
+    dm = SVHNMNISTDataModule(mm_vae.flags, alphabet)
     writer = SummaryWriter(mm_vae.flags.dir_logs)
-    tb_logger = TBLogger(mm_vae.flags.str_experiment, writer)
+    # tb_logger = TBLogger(mm_vae.flags.str_experiment, writer)
     logger2 = TensorBoardLogger("tb_logs", name="Lit_Model")
 
     trainer = Trainer(devices=1, max_epochs=10, fast_dev_run=True, logger=logger2,
                       callbacks=[TQDMProgressBar(refresh_rate=20)])
 
-    trainer.fit(mm_vae, train_dataloaders=train)
+    trainer.fit(mm_vae, datamodule=dm)
 
     result = trainer.test(mm_vae, dm)
 
     print(result)
-
-
-class TriModTrainer(callbacks.Callback):
-    def __init__(self):
-        pass
-
-    def _train(self, exp, tb_logger):
-        mm_vae = exp.mm_vae
-        mm_vae.train()
-        exp.mm_vae = mm_vae
-
-        d_loader = DataLoader(exp.dataset_train, batch_size=exp.flags.batch_size,
-                              shuffle=True,
-                              num_workers=8, drop_last=True)
-
-        for iteration, batch in enumerate(d_loader):
-            basic_routine = basic_routine_epoch(exp, batch)
-            results = basic_routine['results']
-            total_loss = basic_routine['total_loss']
-            klds = basic_routine['klds']
-            log_probs = basic_routine['log_probs']
-            # backprop
-            exp.optimizer.zero_grad()
-            total_loss.backward()
-            exp.optimizer.step()
-            tb_logger.write_training_logs(results, total_loss, log_probs, klds)
-
-    def _test(self, exp, tb_logger, epoch):
-        mm_vae = exp.mm_vae
-        mm_vae.eval()
-        exp.mm_vae = mm_vae
-
-        # set up weights
-        beta_style = exp.flags.beta_style
-        beta_content = exp.flags.beta_content
-        beta = exp.flags.beta
-        rec_weight = 1.0
-
-        d_loader = DataLoader(exp.dataset_test, batch_size=exp.flags.batch_size,
-                              shuffle=True,
-                              num_workers=8, drop_last=True)
-
-        for iteration, batch in enumerate(d_loader):
-            basic_routine = basic_routine_epoch(exp, batch)
-            results = basic_routine['results']
-            total_loss = basic_routine['total_loss']
-            klds = basic_routine['klds']
-            log_probs = basic_routine['log_probs']
-            tb_logger.write_testing_logs(results, total_loss, log_probs, klds)
-
-        plots = generate_plots(exp, epoch)
-        tb_logger.write_plots(plots, epoch)
-
-        if (epoch + 1) % exp.flags.eval_freq == 0 or (epoch + 1) == exp.flags.end_epoch:
-            if exp.flags.eval_lr:
-                clf_lr = train_clf_lr_all_subsets(exp)
-                lr_eval = test_clf_lr_all_subsets(epoch, clf_lr, exp)
-                tb_logger.write_lr_eval(lr_eval)
-
-            if exp.flags.use_clf:
-                gen_eval = test_generation(epoch, exp)
-                tb_logger.write_coherence_logs(gen_eval)
-
-            if exp.flags.calc_nll:
-                lhoods = estimate_likelihoods(exp)
-                tb_logger.write_lhood_logs(lhoods)
-
-            if exp.flags.calc_prd and ((epoch + 1) % exp.flags.eval_freq_fid == 0):
-                prd_scores = calc_prd_score(exp)
-                tb_logger.write_prd_scores(prd_scores)
-
-    def on_train_epoch_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"):
-        pass
-
-    def on_epoch_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"):
-        pass
-
-    def on_validation_epoch_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"):
-        pass

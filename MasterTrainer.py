@@ -1,16 +1,17 @@
 import argparse
-import sys, os
+import os
+import sys
 
 import pytorch_lightning as pl
 import yaml
 from pytorch_lightning import seed_everything
 from pytorch_lightning.callbacks import TQDMProgressBar
 from pytorch_lightning.loggers import TensorBoardLogger
-from tensorboardX import SummaryWriter
+
+from LitModExp import MultiModVAE
 from LitModule import LitModule
 from MNISTSVHNTEXT.SVHNMNISTDataModule import SVHNMNISTDataModule
 from MNISTSVHNTEXT.flags import parser
-from utils.TBlogger import TBLogger
 
 if __name__ == '__main__':
     FLAGS = parser.parse_args()
@@ -56,8 +57,9 @@ if __name__ == '__main__':
             config = yaml.safe_load(file)
         except yaml.YAMLError as exc:
             print(exc)
-    mm_vae = LitModule()
+
     dm = SVHNMNISTDataModule(FLAGS, alphabet)
+    mm_vae = MultiModVAE(config)
     # writer = setWriter()
     tb_logger = TensorBoardLogger(save_dir=config['logging_params']['save_dir'],
                                   name=config['model_params']['name'], )
@@ -70,7 +72,7 @@ if __name__ == '__main__':
     trainer = pl.Trainer(devices=1, max_epochs=2, fast_dev_run=True, logger=tb_logger,
                          callbacks=[TQDMProgressBar(refresh_rate=20)])
 
-    trainer.fit(mm_vae, dm)
+    trainer.fit(mm_vae, datamodule=dm)
     results = trainer.test(mm_vae, dm)
 
     print(results)
