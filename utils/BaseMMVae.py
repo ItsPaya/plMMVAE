@@ -211,7 +211,7 @@ class BaseMMVae(ABC, pl.LightningModule):
                         mods_avail = False
                 if mods_avail:
                     weights_subset = ((1 / float(len(mus_subset))) *
-                                      torch.ones(len(mus_subset))).to(self.flags.device)
+                                      torch.ones(len(mus_subset)))
                     s_mu, s_logvar = self.modalitiy_fusion(mus_subset, logvars_subset, weights_subset)
                     distr_subsets[s_key] = [s_mu, s_logvar]
                     if self.fusion_condition(mods, input_batch):

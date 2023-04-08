@@ -1,12 +1,15 @@
 data_params:
   data_path: "./data"
   batch_size: 256
+  class_dim: 20
+  # add/remove modalities here
   modality_1:
     mod_type: 'mnist'
-    decoder: DecoderImg
-    encoder: EncoderImg
-    class_dim: 20
-    style_dim:
+    # rest set a default
+  modality_2:
+    mod_type: 'svhn'
+  modality_3:
+    mod_type: 'text'
 
 
 

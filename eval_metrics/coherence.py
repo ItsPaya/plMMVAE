@@ -54,7 +54,7 @@ def calculate_coherence(exp, samples):
 
 def test_generation(epoch, exp):
     mods = exp.modalities
-    mm_vae = exp.mm_vae
+    mm_vae = exp
     subsets = exp.subsets
 
     gen_perf = dict()

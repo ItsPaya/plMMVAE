@@ -1,17 +1,22 @@
 import argparse
+import json
 import os
 import sys
 
 import pytorch_lightning as pl
+import torch
 import yaml
+from PIL import ImageFont
 from pytorch_lightning import seed_everything
 from pytorch_lightning.callbacks import TQDMProgressBar
 from pytorch_lightning.loggers import TensorBoardLogger
 
+from Config import Config
 from LitModExp import MultiModVAE
 from LitModule import LitModule
 from MNISTSVHNTEXT.SVHNMNISTDataModule import SVHNMNISTDataModule
 from MNISTSVHNTEXT.flags import parser
+from utils.filehandling import create_dir_structure
 
 if __name__ == '__main__':
     FLAGS = parser.parse_args()
@@ -42,32 +47,24 @@ if __name__ == '__main__':
     with open(alphabet_path) as alphabet_file:
         alphabet = str(''.join(json.load(alphabet_file)))
 
+    plot_img_size = torch.Size((3, 28, 28))
+    font = ImageFont.truetype('FreeSerif.ttf', 38)
+    FLAGS.num_features = len(alphabet)
+
     # set configs here
-
-    parser = argparse.ArgumentParser(description='Generic runner for VAE models')
-    parser.add_argument('--config', '-c',
-                        dest="filename",
-                        metavar='FILE',
-                        help='path to the config file',
-                        default='configs/vae.yaml')
-
-    args = parser.parse_args()
-    with open(args.filename, 'r') as file:
-        try:
-            config = yaml.safe_load(file)
-        except yaml.YAMLError as exc:
-            print(exc)
-
+    parser2 = argparse.ArgumentParser()
+    parser2.add_argument('-c', '--cfg', help='specify config file', metavar='FILE')
+    parser2.add_argument('--batch_size', type=int, default=None)
+    parser2.add_argument('--seed', type=int, metavar='S', default=None)
+    config = Config(parser2)
     dm = SVHNMNISTDataModule(FLAGS, alphabet)
-    mm_vae = MultiModVAE(config)
+    mm_vae = MultiModVAE(config, FLAGS)
     # writer = setWriter()
     tb_logger = TensorBoardLogger(save_dir=config['logging_params']['save_dir'],
                                   name=config['model_params']['name'], )
 
     # For reproducibility
     seed_everything(config['exp_params']['manual_seed'], True)
-
-    # model = vae_models[config['model_params']['name']](**config['model_params'])
 
     trainer = pl.Trainer(devices=1, max_epochs=2, fast_dev_run=True, logger=tb_logger,
                          callbacks=[TQDMProgressBar(refresh_rate=20)])

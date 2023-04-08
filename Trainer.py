@@ -217,7 +217,7 @@ if __name__ == '__main__':
     #                  shuffle=True, num_workers=8, drop_last=True)
     dm = SVHNMNISTDataModule(mm_vae.flags, alphabet)
     writer = SummaryWriter(mm_vae.flags.dir_logs)
-    # tb_logger = TBLogger(mm_vae.flags.str_experiment, writer)
+    # tb_logger = TBLogger(writer)
     logger2 = TensorBoardLogger("tb_logs", name="Lit_Model")
 
     trainer = Trainer(devices=1, max_epochs=10, fast_dev_run=True, logger=logger2,

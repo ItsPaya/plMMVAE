@@ -129,7 +129,9 @@ class SVHNMNIST(VisionDataset):
         self.train = train  # training set or test set
         self.alphabet = alphabet
 
-        self.dir_svhn = os.path.join(self.root, self.dataset_svhn)
+        self.dir_svhn = 'data/SVHN'
+        self.dir_mnist = 'data/MNIST'
+        self.dir_ms = 'data/MNIST_SVHN'
         print(self.dir_svhn)
 
         if not self._check_exists_mnist():
@@ -227,21 +229,20 @@ class SVHNMNIST(VisionDataset):
 
     @property
     def raw_folder(self):
-        return os.path.join(self.root, self.dataset, 'raw')
+        return os.path.join(self.dir_ms, 'raw')
 
     @property
     def processed_folder(self):
-        return os.path.join(self.root, self.dataset_mnist, 'processed')
+        return os.path.join(self.dir_mnist, 'processed')
 
     @property
     def class_to_idx(self):
         return {_class: i for i, _class in enumerate(self.classes)}
 
     def _check_exists_mnist(self):
-        return (os.path.exists(os.path.join(self.processed_folder,
-                                            self.training_file_mnist)) and
-                os.path.exists(os.path.join(self.processed_folder,
-                                            self.test_file_mnist)))
+        print(self.processed_folder)
+        return (os.path.exists(os.path.join(self.processed_folder, self.training_file_mnist)) and
+                os.path.exists(os.path.join(self.processed_folder, self.test_file_mnist)))
 
     def _check_exists_svhn(self):
         return (os.path.exists(os.path.join(self.dir_svhn,
