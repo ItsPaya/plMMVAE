@@ -31,6 +31,7 @@ class MultiModVAE(pl.LightningModule):
         self.subsets = self.set_subsets()
         self.mod_names = self.get_mod_names()
         self.num_mods = len(list(self.mod_names.keys()))
+        self.modalities = self.set_modalities()
         self.model = self.get_model()
 
     def get_mod_names(self):

@@ -18,10 +18,10 @@ from utils.utils import mixture_component_selection
 
 
 class BaseMMVae(ABC, pl.LightningModule):
-    def __init__(self, flags, modalities, subsets):
+    def __init__(self, config, modalities, subsets):
         super(BaseMMVae, self).__init__()
         self.num_modalities = len(modalities.keys())
-        self.flags = flags
+        self.config = config
         self.modalities = modalities
         self.subsets = subsets
         self.set_fusion_functions()
@@ -44,7 +44,7 @@ class BaseMMVae(ABC, pl.LightningModule):
         return eps.mul(std).add_(mu)
 
     def set_fusion_functions(self):
-        weights = reweight_weights(torch.Tensor(self.flags.alpha_modalities))
+        weights = reweight_weights(torch.Tensor(self.config.alpha_modalities))
         weights = weights
         # not sure if needed since originaly: self.weights = weights.to(self.flags.device)
 
@@ -105,9 +105,9 @@ class BaseMMVae(ABC, pl.LightningModule):
 
         weights = reweight_weights(weights)
         mu_moe, logvar_moe = mixture_component_selection(self.flags,
-                                                         mus,
-                                                         logvars,
-                                                         weights)
+                                                               mus,
+                                                               logvars,
+                                                               weights)
 
         return [mu_moe, logvar_moe]
 
@@ -153,8 +153,6 @@ class BaseMMVae(ABC, pl.LightningModule):
                                          latents['logvars'],
                                          latents['weights'])
         for k, key in enumerate(div.keys()):
-            # print(key)
-            # print(div[key])
             results[key] = div[key]
 
         results_rec = dict()
@@ -166,8 +164,6 @@ class BaseMMVae(ABC, pl.LightningModule):
                     m_s_embeddings = self.reparameterize(mu=m_s_mu, logvar=m_s_logvar)
                 else:
                     m_s_embeddings = None
-                # print(m_key)
-                # print(class_embeddings)
                 m_rec = self.lhoods[m_key](*self.decoders[m_key](m_s_embeddings, class_embeddings))
                 results_rec[m_key] = m_rec
         results['rec'] = results_rec
@@ -207,8 +203,7 @@ class BaseMMVae(ABC, pl.LightningModule):
                 mods_avail = True
                 for m, mod in enumerate(mods):
                     if mod.name in input_batch.keys():
-                        mus_subset = torch.cat((mus_subset,
-                                                enc_mods[mod.name][0].unsqueeze(0)),
+                        mus_subset = torch.cat((mus_subset, enc_mods[mod.name][0].unsqueeze(0)),
                                                dim=0)
                         logvars_subset = torch.cat((logvars_subset, enc_mods[mod.name][1].unsqueeze(0)),
                                                    dim=0)

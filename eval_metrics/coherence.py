@@ -52,7 +52,7 @@ def calculate_coherence(exp, samples):
     return c_labels
 
 
-def test_generation(epoch, exp):
+def test_generation(epoch, exp, dl):
     mods = exp.modalities
     mm_vae = exp
     subsets = exp.subsets
@@ -69,10 +69,7 @@ def test_generation(epoch, exp):
                     gen_perf['cond'][l_key][s_key][m_key] = []
         gen_perf['random'][l_key] = []
 
-    d_loader = DataLoader(exp.dataset_test,
-                          batch_size=exp.flags.batch_size,
-                          shuffle=True,
-                          num_workers=8, drop_last=True)
+    d_loader = dl
 
     num_batches_epoch = int(exp.dataset_test.__len__() / float(exp.flags.batch_size))
     cnt_s = 0

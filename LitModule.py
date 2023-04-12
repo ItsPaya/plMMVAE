@@ -7,6 +7,7 @@ import torch.nn as nn
 import pytorch_lightning as pl
 from sklearn.metrics import accuracy_score
 from torch import optim
+from torch.autograd import Variable
 
 import utils.utils
 from MNISTSVHNTEXT import VAEtrimodalSVHNMNIST
@@ -15,6 +16,7 @@ from eval_metrics.coherence import test_generation
 from eval_metrics.likelihood import estimate_likelihoods
 from eval_metrics.representation import train_clf_lr_all_subsets, test_clf_lr_all_subsets
 from eval_metrics.sample_quality import calc_prd_score
+from plotting import generate_plots
 
 from utils.BaseMMVae import BaseMMVae
 from MNISTSVHNTEXT.ConvNetImgClfMNIST import ClfImg as ClfImgMNIST
@@ -23,16 +25,18 @@ from MNISTSVHNTEXT.ConvNetTextClf import ClfText as ClfText
 
 
 class LitModule(BaseMMVae):
-    def __init__(self, flags, modalities, subsets):
+    def __init__(self, flags, modalities, subsets, plot_img_size, font):
         super().__init__(flags, modalities, subsets)
         self.clfs = self.set_clfs()
         self.num_modalities = len(self.modalities.keys())
         self.rec_weights = self.set_rec_weights()
         self.style_weights = self.set_style_weights()
 
-        # self.test_samples = get_test_samples()
+        self.test_samples = None
         self.eval_metric = accuracy_score
         self.paths_fid = self.set_paths_fid()
+        self.plot_img_size = plot_img_size
+        self.font = font
 
         self.labels = ['digit']
 
@@ -102,7 +106,44 @@ class LitModule(BaseMMVae):
                 self.log_dict({'ts_mu': l_mods[key][0].mean().item()}, on_epoch=True)
             if not l_mods[key][1] is None:
                 self.log('ts_logvar', l_mods[key][1].mean().item(), on_epoch=True)
-        #  self.logger.write_testing_logs(results, total_loss, log_probs, klds)
+
+        epoch = self.current_epoch
+        self.test_samples = self.get_test_samples()
+        # plots = generate_plots(self, epoch)
+        # for k, p_key in enumerate(plots.keys()):
+        #     ps = plots[p_key]
+        #     for l, name in enumerate(ps.keys()):
+        #         fig = ps[name]
+        #         self.logger.experiment.add_image(p_key + '_' + name,
+        #                        fig, epoch, dataformats='HWC')
+
+        if (epoch + 1) % self.flags.eval_freq == 0 or (epoch + 1) == self.flags.end_epoch:
+            if self.flags.eval_lr:
+                clf_lr = train_clf_lr_all_subsets(self, self.trainer.train_dataloader)
+                lr_eval = test_clf_lr_all_subsets(epoch, clf_lr, self, self.trainer.test_dataloaders)
+                for s, l_key in enumerate(sorted(lr_eval.keys())):
+                    self.log('Latent Representation/%s' % l_key,
+                             lr_eval[l_key], on_epoch=True)
+
+            if self.flags.use_clf:
+                gen_eval = test_generation(epoch, self, self.trainer.test_dataloaders)
+                for j, l_key in enumerate(sorted(gen_eval['cond'].keys())):
+                    for k, s_key in enumerate(gen_eval['cond'][l_key].keys()):
+                        self.log('Generation/%s/%s' %
+                                 (l_key, s_key),
+                                 gen_eval['cond'][l_key][s_key],
+                                 on_epoch=True)
+                self.log('Generation/Random', gen_eval['random'], on_epoch=True)
+
+            if self.flags.calc_nll:
+                lhoods = estimate_likelihoods(self, self.trainer.test_dataloaders)
+                for k, key in enumerate(sorted(lhoods.keys())):
+                    self.log('Likelihoods/%s' % key,
+                             lhoods[key], on_epoch=True)
+
+            if self.flags.calc_prd and ((epoch + 1) % self.flags.eval_freq_fid == 0):
+                prd_scores = calc_prd_score(self)
+                self.log('PRD', prd_scores, on_epoch=True)
 
         return basic_routine
 
@@ -122,6 +163,8 @@ class LitModule(BaseMMVae):
         batch_d = batch[0]
         batch_l = batch[1]
         mods = self.modalities
+        for k, m_key in enumerate(batch_d.keys()):
+            batch_d[m_key] = Variable(batch_d[m_key]).to(self.device)
 
         results = self.forward(batch_d)
 
@@ -217,11 +260,12 @@ class LitModule(BaseMMVae):
         return weights
 
     def get_test_samples(self, num_images=10):
-        n_test = self.dataset_test.__len__()
+        dataset_test = self.trainer.test_dataloaders[0].dataset
+        n_test = dataset_test.__len__()
         samples = []
         for i in range(num_images):
             while True:
-                sample, target = self.dataset_test.__getitem__(random.randint(0, n_test))
+                sample, target = dataset_test.__getitem__(random.randint(0, n_test))
                 if target == i:
                     for k, key in enumerate(sample):
                         sample[key] = sample[key]

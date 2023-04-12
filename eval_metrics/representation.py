@@ -16,14 +16,11 @@ from sklearn.metrics import accuracy_score
 from sklearn.linear_model import LogisticRegression
 
 
-def train_clf_lr_all_subsets(exp):
-    mm_vae = exp.mm_vae
-    mm_vae.eval()
+def train_clf_lr_all_subsets(exp, dl):
+    mm_vae = exp
     subsets = exp.subsets
 
-    d_loader = DataLoader(exp.dataset_train, batch_size=exp.flags.batch_size,
-                          shuffle=True,
-                          num_workers=8, drop_last=True)
+    d_loader = dl
 
     bs = exp.flags.batch_size
     num_batches_epoch = int(exp.dataset_train.__len__() / float(bs))
@@ -56,9 +53,8 @@ def train_clf_lr_all_subsets(exp):
     return clf_lr
 
 
-def test_clf_lr_all_subsets(epoch, clf_lr, exp):
-    mm_vae = exp.mm_vae
-    mm_vae.eval()
+def test_clf_lr_all_subsets(epoch, clf_lr, exp, dl):
+    mm_vae = exp
     subsets = exp.subsets
 
     lr_eval = dict()
@@ -68,9 +64,7 @@ def test_clf_lr_all_subsets(epoch, clf_lr, exp):
             if s_key != '':
                 lr_eval[label_str][s_key] = []
 
-    d_loader = DataLoader(exp.dataset_test, batch_size=exp.flags.batch_size,
-                          shuffle=True,
-                          num_workers=8, drop_last=True)
+    d_loader = dl
 
     num_batches_epoch = int(exp.dataset_test.__len__() / float(exp.flags.batch_size))
     for iteration, batch in enumerate(d_loader):

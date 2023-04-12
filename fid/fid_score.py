@@ -78,7 +78,7 @@ def get_activations(files, model, batch_size=50, dims=2048,
        activations of the given tensor when feeding inception with the
        query tensor.
     """
-    model.eval()
+    # model.eval()
 
     if len(files) % batch_size != 0:
         print(('Warning: number of images is not a multiple of the '
@@ -171,8 +171,8 @@ def calculate_frechet_distance(mu1, sigma1, mu2, sigma2, eps=1e-6):
     if np.iscomplexobj(covmean):
         if not np.allclose(np.diagonal(covmean).imag, 0, atol=1e-3):
             m = np.max(np.abs(covmean.imag))
-            covmean = np.nan;
-            print('Imaginary component {}'.format(m));
+            covmean = np.nan
+            print('Imaginary component {}'.format(m))
             # raise ValueError('Imaginary component {}'.format(m))
         else:
             covmean = covmean.real

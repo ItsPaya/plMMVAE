@@ -171,6 +171,7 @@ if __name__ == '__main__':
     else:
         print('method implemented...exit!')
         sys.exit()
+
     print(FLAGS.modality_poe)
     print(FLAGS.modality_moe)
     print(FLAGS.modality_jsd)
@@ -183,22 +184,21 @@ if __name__ == '__main__':
     alphabet_path = os.path.join(os.getcwd(), 'alphabet.json')
     with open(alphabet_path) as alphabet_file:
         alphabet = str(''.join(json.load(alphabet_file)))
-    # need to rewrite the experiment setup and run epoch part (mainly basic_epoch_routine)
-    # basic epoch routine left to implement
+
     plot_img_size = torch.Size((3, 28, 28))
-    font = ImageFont.truetype('FreeSerif.ttf', 38)  # seems to cause problems
+    font = ImageFont.truetype('FreeSerif.ttf', 38)
     FLAGS.num_features = len(alphabet)
     modalities = set_modalities()
-    num_modalities = len(modalities.keys())
+    # num_modalities = len(modalities.keys())
     subsets = set_subsets()
-    mm_vae = LitModule(FLAGS, modalities, subsets)
-    clfs = set_clfs()
-    rec_weights = set_rec_weights()
-    style_weights = set_style_weights()
+    mm_vae = LitModule(FLAGS, modalities, subsets, plot_img_size, font)
+    # clfs = set_clfs()
+    # rec_weights = set_rec_weights()
+    # style_weights = set_style_weights()
 
     # test_samples = get_test_samples() not sure what to do here
-    eval_metrics = accuracy_score
-    paths_fic = set_paths_fid()
+    # eval_metrics = accuracy_score
+    # paths_fic = set_paths_fid()
 
     labels = ['digit']
 
@@ -220,11 +220,12 @@ if __name__ == '__main__':
     # tb_logger = TBLogger(writer)
     logger2 = TensorBoardLogger("tb_logs", name="Lit_Model")
 
-    trainer = Trainer(devices=1, max_epochs=10, fast_dev_run=True, logger=logger2,
+    trainer = Trainer(devices=1, max_epochs=1, fast_dev_run=True, logger=logger2,
                       callbacks=[TQDMProgressBar(refresh_rate=20)])
 
-    trainer.fit(mm_vae, datamodule=dm)
+    trainer.fit(mm_vae, dm)
+    trainer.validate(mm_vae, dm)
 
-    result = trainer.test(mm_vae, dm)
+    result = trainer.test(mm_vae, datamodule=dm)
 
     print(result)

@@ -12,7 +12,7 @@ from torchvision import transforms as transforms
 
 from MNISTSVHNTEXT.SVHNMNISTDataset import SVHNMNIST
 
-BATCH_SIZE = 256
+# BATCH_SIZE = 256
 
 
 class SVHNMNISTDataModule(pl.LightningDataModule):
@@ -51,10 +51,10 @@ class SVHNMNISTDataModule(pl.LightningDataModule):
         self.dataset_test = self.test
 
     def train_dataloader(self):
-        return DataLoader(self.dataset_train, batch_size=BATCH_SIZE, shuffle=True, num_workers=8, drop_last=True)
+        return DataLoader(self.dataset_train, batch_size=self.flags.batch_size, shuffle=True, num_workers=4, drop_last=True)
 
     def val_dataloader(self):
-        return DataLoader(self.dataset_val, batch_size=BATCH_SIZE, num_workers=8, drop_last=True)
+        return DataLoader(self.dataset_val, batch_size=self.flags.batch_size, num_workers=4, drop_last=True)
 
     def test_dataloader(self):
-        return DataLoader(self.dataset_test, batch_size=BATCH_SIZE, num_workers=8, drop_last=True)
+        return DataLoader(self.dataset_test, batch_size=self.flags.batch_size, num_workers=4, drop_last=True)

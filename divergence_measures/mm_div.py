@@ -62,7 +62,7 @@ def calc_alphaJSD_modalities_mixture(m1_mu, m1_logvar, m2_mu, m2_logvar, flags):
     return summed_klds, klds, entropies_mixture
 
 
-def calc_alphaJSD_modalities(flags, mus, logvars, weights, normalization=None):
+def calc_alphaJSD_modalities(device, mus, logvars, weights, normalization=None):
     num_mods = mus.shape[0]
     num_samples = mus.shape[1]
     alpha_mu, alpha_logvar = alpha_poe(weights, mus, logvars)
@@ -70,7 +70,7 @@ def calc_alphaJSD_modalities(flags, mus, logvars, weights, normalization=None):
         klds = torch.zeros(num_mods)
     else:
         klds = torch.zeros(num_mods, num_samples)
-
+    klds = klds.to(device)
     for k in range(0, num_mods):
         kld = calc_kl_divergence(mus[k, :, :], logvars[k, :, :], alpha_mu,
                                  alpha_logvar, norm_value=normalization)
@@ -84,13 +84,14 @@ def calc_alphaJSD_modalities(flags, mus, logvars, weights, normalization=None):
     return group_div, klds, [alpha_mu, alpha_logvar]
 
 
-def calc_group_divergence_moe(flags, mus, logvars, weights, normalization=None):
+def calc_group_divergence_moe(device, mus, logvars, weights, normalization=None):
     num_mods = mus.shape[0]
     num_samples = mus.shape[1]
     if normalization is not None:
         klds = torch.zeros(num_mods)
     else:
         klds = torch.zeros(num_mods, num_samples)
+    klds = klds.to(device)
     for k in range(0, num_mods):
         kld_ind = calc_kl_divergence(mus[k, :, :], logvars[k, :, :],
                                      norm_value=normalization)
@@ -104,7 +105,7 @@ def calc_group_divergence_moe(flags, mus, logvars, weights, normalization=None):
     return group_div, klds
 
 
-def calc_group_divergence_poe(flags, mus, logvars, norm=None):
+def calc_group_divergence_poe(mus, logvars, norm=None):
     num_mods = mus.shape[0]
     poe_mu, poe_logvar = poe(mus, logvars)
     kld_poe = calc_kl_divergence(poe_mu, poe_logvar, norm_value=norm)

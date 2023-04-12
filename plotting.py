@@ -27,7 +27,7 @@ def generate_plots(exp, epoch):
 
 
 def generate_random_samples_plots(exp, epoch):
-    model = exp.mm_vae
+    model = exp
     mods = exp.modalities
     num_samples = 100
     random_samples = model.generate(num_samples)
@@ -36,7 +36,7 @@ def generate_random_samples_plots(exp, epoch):
         mod = mods[m_key_in]
         samples_mod = random_samples[m_key_in]
         rec = torch.zeros(exp.plot_img_size,
-                          dtype=torch.float32).repeat(num_samples,1,1,1)
+                          dtype=torch.float32).repeat(num_samples, 1, 1, 1)
         for l in range(0, num_samples):
             rand_plot = mod.plot_data(samples_mod[l])
             rec[l, :, :, :] = rand_plot
@@ -52,7 +52,7 @@ def generate_random_samples_plots(exp, epoch):
 
 
 def generate_swapping_plot(exp, epoch):
-    model = exp.mm_vae
+    model = exp
     mods = exp.modalities
     samples = exp.test_samples
     swap_plots = dict()
@@ -61,7 +61,7 @@ def generate_swapping_plot(exp, epoch):
         for l, m_key_out in enumerate(mods.keys()):
             mod_out = mods[m_key_out]
             rec = torch.zeros(exp.plot_img_size,
-                              dtype=torch.float32).repeat(121,1,1,1)
+                              dtype=torch.float32).repeat(121, 1, 1, 1)
             for i in range(len(samples)):
                 c_sample_in = mod_in.plot_data(samples[i][mod_in.name])
                 s_sample_out = mod_out.plot_data(samples[i][mod_out.name])
@@ -94,7 +94,7 @@ def generate_swapping_plot(exp, epoch):
 
 
 def generate_conditional_fig_M(exp, epoch, M):
-    model = exp.mm_vae
+    model = exp
     mods = exp.modalities
     samples = exp.test_samples
     subsets = exp.subsets
@@ -112,7 +112,7 @@ def generate_conditional_fig_M(exp, epoch, M):
             for l, m_key_out in enumerate(mods.keys()):
                 mod_out = mods[m_key_out]
                 rec = torch.zeros(exp.plot_img_size,
-                                  dtype=torch.float32).repeat(100 + M*10,1,1,1)
+                                  dtype=torch.float32).repeat(100 + M*10, 1, 1, 1)
                 for m, sample in enumerate(samples):
                     for n, mod_in in enumerate(s_in):
                         c_in = mod_in.plot_data(sample[mod_in.name])

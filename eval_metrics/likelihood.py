@@ -25,7 +25,7 @@ LOG2PI = float(np.log(2.0 * math.pi))
 # at the moment: only marginals and joint
 def calc_log_likelihood_batch(exp, latents, subset_key, subset, batch, num_imp_samples=10):
     flags = exp.flags
-    model = exp.mm_vae
+    model = exp
     mod_weights = exp.style_weights
     mods = exp.modalities
 
@@ -98,15 +98,12 @@ def calc_log_likelihood_batch(exp, latents, subset_key, subset, batch, num_imp_s
     return ll
 
 
-def estimate_likelihoods(exp):
-    model = exp.mm_vae
+def estimate_likelihoods(exp, dl):
+    model = exp
     mods = exp.modalities
     bs_normal = exp.flags.batch_size
     exp.flags.batch_size = 64
-    d_loader = DataLoader(exp.dataset_test,
-                          batch_size=exp.flags.batch_size,
-                          shuffle=True,
-                          num_workers=8, drop_last=True)
+    d_loader = dl
 
     subsets = exp.subsets
     lhoods = dict()
