@@ -16,16 +16,16 @@ from sklearn.metrics import accuracy_score
 from sklearn.linear_model import LogisticRegression
 
 
-def train_clf_lr_all_subsets(exp, dl):
+def train_clf_lr_all_subsets(exp, dl, dataset):
     mm_vae = exp
     subsets = exp.subsets
 
     d_loader = dl
 
     bs = exp.flags.batch_size
-    num_batches_epoch = int(exp.dataset_train.__len__() / float(bs))
+    # num_batches_epoch = int(dataset.__len__() / float(bs))
     class_dim = exp.flags.class_dim
-    n_samples = int(exp.dataset_train.__len__())
+    n_samples = int(dataset.__len__())
     data_train = dict()
     for k, s_key in enumerate(subsets.keys()):
         if s_key != '':
@@ -40,7 +40,7 @@ def train_clf_lr_all_subsets(exp, dl):
         all_labels[(it * bs):((it + 1) * bs), :] = np.reshape(batch_l, (bs,
                                                                         len(exp.labels)))
         for k, key in enumerate(lr_subsets.keys()):
-            data_train[key][(it * bs):((it + 1) * bs), :] = lr_subsets[key][0].cpu().data.numpy()
+            data_train[key][(it * bs):((it + 1) * bs), :] = lr_subsets[key][0]  # .cpu().data.numpy()
 
     n_train_samples = exp.flags.num_training_samples_lr
     rand_ind_train = np.random.randint(n_samples, size=n_train_samples)
@@ -66,7 +66,7 @@ def test_clf_lr_all_subsets(epoch, clf_lr, exp, dl):
 
     d_loader = dl
 
-    num_batches_epoch = int(exp.dataset_test.__len__() / float(exp.flags.batch_size))
+    # num_batches_epoch = int(dataset.__len__() / float(exp.flags.batch_size))
     for iteration, batch in enumerate(d_loader):
         batch_d = batch[0]
         batch_l = batch[1]
@@ -75,6 +75,7 @@ def test_clf_lr_all_subsets(epoch, clf_lr, exp, dl):
         data_test = dict()
         for k, key in enumerate(lr_subsets.keys()):
             data_test[key] = lr_subsets[key][0].cpu().data.numpy()
+            # might remove from .cpu on
         evals = classify_latent_representations(exp,
                                                 epoch,
                                                 clf_lr,

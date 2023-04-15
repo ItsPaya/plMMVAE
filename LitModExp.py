@@ -138,6 +138,7 @@ class MultiModVAE(pl.LightningModule):
         return subsets
 
     def get_model(self):
+        # make it to choose model via config? with provided params
         model = VAEtrimodalSVHNMNIST(self.flags, self.config.mods, self.subsets)
         return model
 

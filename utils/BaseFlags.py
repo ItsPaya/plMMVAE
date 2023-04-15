@@ -75,7 +75,7 @@ parser.add_argument('--num_training_samples_lr', type=int, default=500,
                     help="number of training samples to train the lr clf")
 
 #multimodal
-parser.add_argument('--method', type=str, default='poe', help='choose method for training the model')
+parser.add_argument('--method', type=str, default='joint_elbo', help='choose method for training the model')
 parser.add_argument('--modality_jsd', type=bool, default=False, help="modality_jsd")
 parser.add_argument('--modality_poe', type=bool, default=False, help="modality_poe")
 parser.add_argument('--modality_moe', type=bool, default=False, help="modality_moe")

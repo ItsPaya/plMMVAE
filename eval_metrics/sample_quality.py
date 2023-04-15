@@ -169,9 +169,9 @@ def calculate_prd_dict(feats_real, dict_feats_gen):
 
 
 def get_clf_activations(flags, data, model):
-    model.eval()
     act = model.get_activations(data)
     act = act.cpu().data.numpy().reshape(flags.batch_size, -1)
+    # alt. act = act.reshape(flags.batch_size, -1)
     return act
 
 

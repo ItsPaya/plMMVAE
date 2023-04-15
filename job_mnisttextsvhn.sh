@@ -19,14 +19,14 @@ echo "TMPDIR: $TMPDIR"
 
 # activate conda env
 eval "$(conda shell.bash hook)"
-conda activate mopoe
+conda activate gpu_env
 echo "CONDA_PREFIX: $CONDA_PREFIX"
 
 METHOD="joint_elbo"  # NOTE: valid options are "joint_elbo", "poe", and "moe"
 LIKELIHOOD_M1="laplace"
 LIKELIHOOD_M2="laplace"
 LIKELIHOOD_M3="categorical"
-DIR_DATA="$PWD/data/data"
+DIR_DATA="$PWD/data"
 DIR_CLF="$PWD/trained_classifiers/trained_clfs_mst"
 DIR_EXPERIMENT="$PWD/runs/MNIST_SVHN_Text/${METHOD}/non_factorized/${LIKELIHOOD_M1}_${LIKELIHOOD_M2}_${LIKELIHOOD_M3}"
 PATH_INC_V3="$PWD/pt_inception-2015-12-05-6726825d.pth"

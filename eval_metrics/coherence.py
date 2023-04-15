@@ -25,6 +25,8 @@ def classify_cond_gen_samples(exp, labels, cond_samples):
             for l, label_str in enumerate(exp.labels):
                 score = exp.eval_label(attr_hat.cpu().data.numpy(), labels,
                                        index=l)
+                # alt.
+                # score = exp.eval_label(attr_hat, labels, index=l)
                 eval_labels[label_str][key] = score
         else:
             print(str(key) + 'not existing in cond_gen_samples')
@@ -44,6 +46,7 @@ def calculate_coherence(exp, samples):
             samples_mod = samples[mod.name]
             attr_mod = clf_mod(samples_mod)
             output_prob_mod = attr_mod.cpu().data.numpy()
+            # might remove .cpu...
             pred_mod = np.argmax(output_prob_mod, axis=1).astype(int)
             pred_mods[k, :] = pred_mod
         coh_mods = np.all(pred_mods == pred_mods[0, :], axis=0)
@@ -52,7 +55,7 @@ def calculate_coherence(exp, samples):
     return c_labels
 
 
-def test_generation(epoch, exp, dl):
+def test_generation(epoch, exp, dm):
     mods = exp.modalities
     mm_vae = exp
     subsets = exp.subsets
@@ -69,9 +72,9 @@ def test_generation(epoch, exp, dl):
                     gen_perf['cond'][l_key][s_key][m_key] = []
         gen_perf['random'][l_key] = []
 
-    d_loader = dl
+    d_loader = dm.test_dataloader()
 
-    num_batches_epoch = int(exp.dataset_test.__len__() / float(exp.flags.batch_size))
+    num_batches_epoch = int(dm.dataset_test.__len__() / float(exp.flags.batch_size))
     cnt_s = 0
     for iteration, batch in enumerate(d_loader):
         batch_d = batch[0]

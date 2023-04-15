@@ -97,8 +97,6 @@ def calc_kl_divergence_ub_gauss_mixture(flags, index, mu1, logvar1, mus, logvars
 
 def calc_entropy_gauss(flags, logvar, norm_value=None):
     PI = torch.Tensor([math.pi])
-    if flags.cuda:
-        PI = PI.cuda()
     ent = 0.5*torch.sum(torch.log(2*PI) + logvar + 1)
     if norm_value is not None:
         ent = ent / norm_value

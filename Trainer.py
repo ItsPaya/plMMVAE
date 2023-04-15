@@ -4,8 +4,9 @@ from itertools import chain, combinations
 import PIL.Image
 import numpy as np
 import pytorch_lightning as pl
+import lightning.pytorch as lp
 from PIL import ImageFont
-from pytorch_lightning import Trainer, callbacks
+from pytorch_lightning import Trainer, callbacks, seed_everything
 from pytorch_lightning.callbacks import TQDMProgressBar
 from sklearn.metrics import accuracy_score
 from tensorboardX import SummaryWriter
@@ -50,6 +51,7 @@ from MNISTSVHNTEXT.ConvNetImgMNIST import EncoderImg, DecoderImg
 from MNISTSVHNTEXT.ConvNetImgSVHN import EncoderSVHN, DecoderSVHN
 from MNISTSVHNTEXT.ConvNetTextMNIST import EncoderText, DecoderText
 
+SEED = 1265
 
 def set_modalities():
     mod1 = MNIST('mnist', EncoderImg(FLAGS), DecoderImg(FLAGS),
@@ -88,73 +90,6 @@ def set_subsets():
     return subsets
 
 
-def set_clfs():
-    model_clf_m1 = None
-    model_clf_m2 = None
-    model_clf_m3 = None
-    if FLAGS.use_clf:
-        model_clf_m1 = ClfImgMNIST()
-        model_clf_m1.load_state_dict(torch.load(os.path.join(FLAGS.dir_clf,
-                                                             FLAGS.clf_save_m1)))
-
-        model_clf_m2 = ClfImgSVHN()
-        model_clf_m2.load_state_dict(torch.load(os.path.join(FLAGS.dir_clf,
-                                                             FLAGS.clf_save_m2)))
-
-        model_clf_m3 = ClfText(FLAGS)
-        model_clf_m3.load_state_dict(torch.load(os.path.join(FLAGS.dir_clf,
-                                                             FLAGS.clf_save_m3)))
-
-    clfs = {'mnist': model_clf_m1,
-            'svhn': model_clf_m2,
-            'text': model_clf_m3}
-    return clfs
-
-
-def set_rec_weights():
-    rec_weights = dict()
-    ref_mod_d_size = modalities['svhn'].data_size.numel()
-    for k, m_key in enumerate(modalities.keys()):
-        mod = modalities[m_key]
-        numel_mod = mod.data_size.numel()
-        rec_weights[mod.name] = float(ref_mod_d_size / numel_mod)
-    return rec_weights
-
-
-def set_style_weights():
-    weights = dict()
-    weights['mnist'] = FLAGS.beta_m1_style
-    weights['svhn'] = FLAGS.beta_m2_style
-    weights['text'] = FLAGS.beta_m3_style
-    return weights
-
-
-def mean_eval_metric(self, values):
-    return np.mean(np.array(values))
-
-
-def get_prediction_from_attr(self, attr, index=None):
-    pred = np.argmax(attr, axis=1).astype(int)
-    return pred
-
-
-def eval_label(self, values, labels, index):
-    pred = get_prediction_from_attr(values)
-    return self.eval_metric(labels, pred)
-
-
-def set_paths_fid():
-    dir_real = os.path.join(FLAGS.dir_gen_eval_fid, 'real')
-    dir_random = os.path.join(FLAGS.dir_gen_eval_fid, 'random')
-    paths = {'real': dir_real,
-             'random': dir_random}
-    dir_cond = FLAGS.dir_gen_eval_fid
-    for k, name in enumerate(subsets):
-        paths[name] = os.path.join(dir_cond, name)
-    print(paths.keys())
-    return paths
-
-
 if __name__ == '__main__':
     FLAGS = parser.parse_args()
     # use_cuda = torch.cuda.is_available()
@@ -181,6 +116,7 @@ if __name__ == '__main__':
                               FLAGS.div_weight_m2_content, FLAGS.div_weight_m3_content]
 
     FLAGS = create_dir_structure(FLAGS)
+    seed_everything(SEED, True)
     alphabet_path = os.path.join(os.getcwd(), 'alphabet.json')
     with open(alphabet_path) as alphabet_file:
         alphabet = str(''.join(json.load(alphabet_file)))
@@ -216,16 +152,16 @@ if __name__ == '__main__':
     # train = DataLoader(train_set, batch_size=FLAGS.batch_size,
     #                  shuffle=True, num_workers=8, drop_last=True)
     dm = SVHNMNISTDataModule(mm_vae.flags, alphabet)
-    writer = SummaryWriter(mm_vae.flags.dir_logs)
+    # writer = SummaryWriter(mm_vae.flags.dir_logs)
     # tb_logger = TBLogger(writer)
     logger2 = TensorBoardLogger("tb_logs", name="Lit_Model")
 
-    trainer = Trainer(devices=1, max_epochs=1, fast_dev_run=True, logger=logger2,
+    trainer = Trainer(devices=1, accelerator='auto', max_epochs=3, fast_dev_run=False, logger=logger2,
                       callbacks=[TQDMProgressBar(refresh_rate=20)])
 
     trainer.fit(mm_vae, dm)
-    trainer.validate(mm_vae, dm)
+    # trainer.validate(mm_vae, dm)
 
-    result = trainer.test(mm_vae, datamodule=dm)
+    # result = trainer.test(mm_vae, datamodule=dm)
 
-    print(result)
+    # print(result)

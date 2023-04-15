@@ -66,7 +66,7 @@ def mixture_component_selection(flags, mus, logvars, w_modalities=None):
     num_components = mus.shape[0]
     num_samples = mus.shape[1]
     if w_modalities is None:
-        w_modalities = torch.Tensor(flags.alpha_modalities)
+        w_modalities = torch.Tensor(flags.alpha_modalities) # evt .to(device) needed
     idx_start = []
     idx_end = []
     for k in range(0, num_components):

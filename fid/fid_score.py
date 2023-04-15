@@ -119,6 +119,7 @@ def get_activations(files, model, batch_size=50, dims=2048,
             pred = adaptive_avg_pool2d(pred, output_size=(1, 1))
 
         pred_arr[start:end] = pred.cpu().data.numpy().reshape(batch_size, -1)
+        # evt pred_arr[start:end] = pred.reshape(batch_size, -1)
 
     if verbose:
         print(' done')

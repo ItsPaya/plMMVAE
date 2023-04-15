@@ -70,7 +70,8 @@ def calc_alphaJSD_modalities(device, mus, logvars, weights, normalization=None):
         klds = torch.zeros(num_mods)
     else:
         klds = torch.zeros(num_mods, num_samples)
-    klds = klds.to(device)
+    # not sure if needed
+    # klds = klds.to(device)
     for k in range(0, num_mods):
         kld = calc_kl_divergence(mus[k, :, :], logvars[k, :, :], alpha_mu,
                                  alpha_logvar, norm_value=normalization)
@@ -91,7 +92,9 @@ def calc_group_divergence_moe(device, mus, logvars, weights, normalization=None)
         klds = torch.zeros(num_mods)
     else:
         klds = torch.zeros(num_mods, num_samples)
-    klds = klds.to(device)
+    # not sure if needed
+    # klds = klds.to(device)
+    # weights = weights.to(device)
     for k in range(0, num_mods):
         kld_ind = calc_kl_divergence(mus[k, :, :], logvars[k, :, :],
                                      norm_value=normalization)
@@ -105,11 +108,13 @@ def calc_group_divergence_moe(device, mus, logvars, weights, normalization=None)
     return group_div, klds
 
 
-def calc_group_divergence_poe(mus, logvars, norm=None):
+def calc_group_divergence_poe(device, mus, logvars, norm=None):
     num_mods = mus.shape[0]
     poe_mu, poe_logvar = poe(mus, logvars)
     kld_poe = calc_kl_divergence(poe_mu, poe_logvar, norm_value=norm)
     klds = torch.zeros(num_mods)
+    # evt
+    # klds = klds.to(device)
     for k in range(0, num_mods):
         kld_ind = calc_kl_divergence(mus[k, :, :], logvars[k, :, :],
                                      norm_value=norm)
@@ -126,6 +131,7 @@ def calc_modality_divergence(m1_mu, m1_logvar, m2_mu, m2_logvar, flags):
         uniform_logvar = torch.zeros(m1_logvar.shape)
         klds = torch.zeros(3, 3)
         klds_modonly = torch.zeros(2, 2)
+        # need all .to(flags.device)?
 
         mus = [uniform_mu, m1_mu, m2_mu]
         logvars = [uniform_logvar, m1_logvar, m2_logvar]

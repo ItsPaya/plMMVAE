@@ -11,13 +11,14 @@ from divergence_measures.mm_div import calc_group_divergence_moe
 from divergence_measures.mm_div import poe
 
 import pytorch_lightning as pl
+import lightning.pytorch as lp
 
 import utils.utils
 from utils.utils import reweight_weights
 from utils.utils import mixture_component_selection
 
 
-class BaseMMVae(ABC, pl.LightningModule):
+class BaseMMVae(ABC, lp.LightningModule):
     def __init__(self, flags, modalities, subsets):
         super(BaseMMVae, self).__init__()
         self.num_modalities = len(modalities.keys())
@@ -40,12 +41,11 @@ class BaseMMVae(ABC, pl.LightningModule):
     def reparameterize(self, mu, logvar):
         std = logvar.mul(0.5).exp_()
         eps = Variable(std.data.new(std.size()).normal_())
-
         return eps.mul(std).add_(mu)
 
     def set_fusion_functions(self):
         weights = reweight_weights(torch.Tensor(self.flags.alpha_modalities))
-        weights = weights
+        weights = weights.to(self.device)
         # not sure if needed since originaly: self.weights = weights.to(self.flags.device)
 
         if self.flags.modality_moe:
@@ -70,7 +70,7 @@ class BaseMMVae(ABC, pl.LightningModule):
             weights = self.weights
 
         weights = weights.clone()
-        weights = reweight_weights(weights)
+        weights = reweight_weights(weights)  # .to(self.device) ?
         div_measures = calc_group_divergence_moe(self.device,
                                                  mus,
                                                  logvars,
@@ -92,6 +92,7 @@ class BaseMMVae(ABC, pl.LightningModule):
                                                 logvars,
                                                 weigths,
                                                 normalization=self.flags.batch_size)
+
         divs = dict()
         divs['joint_divergence'] = div_measures[0]
         divs['individual_divs'] = div_measures[1]
@@ -112,15 +113,18 @@ class BaseMMVae(ABC, pl.LightningModule):
         return [mu_moe, logvar_moe]
 
     def poe_fusion(self, mus, logvars, weights=None):
-        # not sure if needed since .to and device calls get deleted
         if self.flags.modality_poe or mus.shape[0] == len(self.modalities.keys()):
             num_samples = mus[0].shape[0]
+            # mus = torch.cat((mus, torch.zeros(1, num_samples,
+            #                                 self.flags.class_dim).to(self.device)),
+            #             dim=0)
             mus = torch.cat((mus, torch.zeros(1, num_samples,
-                                              self.flags.class_dim).to(self.device)),
-                            dim=0)
+                                              self.flags.class_dim)), dim=0)
+            # logvars = torch.cat((logvars, torch.zeros(1, num_samples,
+            #                                           self.flags.class_dim).to(self.device)),
+            #                     dim=0)
             logvars = torch.cat((logvars, torch.zeros(1, num_samples,
-                                                      self.flags.class_dim).to(self.device)),
-                                dim=0)
+                                                      self.flags.class_dim)), dim=0)
         # mus = torch.cat(mus, dim=0);
         # logvars = torch.cat(logvars, dim=0);
         mu_poe, logvar_poe = poe(mus, logvars)
@@ -166,8 +170,8 @@ class BaseMMVae(ABC, pl.LightningModule):
                     m_s_embeddings = self.reparameterize(mu=m_s_mu, logvar=m_s_logvar)
                 else:
                     m_s_embeddings = None
-                # print(m_key)
-                # print(class_embeddings)
+                # print('key: ' + str(m_key))
+                # print('c embd: ' + str(class_embeddings))
                 m_rec = self.lhoods[m_key](*self.decoders[m_key](m_s_embeddings, class_embeddings))
                 results_rec[m_key] = m_rec
         results['rec'] = results_rec
@@ -194,8 +198,8 @@ class BaseMMVae(ABC, pl.LightningModule):
         latents = dict()
         enc_mods = self.encode(input_batch)
         latents['modalities'] = enc_mods
-        mus = torch.Tensor().to(self.device)
-        logvars = torch.Tensor().to(self.device)
+        mus = torch.Tensor()  # .to(self.device)
+        logvars = torch.Tensor()  # .to(self.device)
         distr_subsets = dict()
         for k, s_key in enumerate(self.subsets.keys()):
             if s_key != '':
@@ -215,6 +219,12 @@ class BaseMMVae(ABC, pl.LightningModule):
                     else:
                         mods_avail = False
                 if mods_avail:
+                    # print('mus_sub: ' + str(mus_subset))
+                    # print('1/float: ' + str(1 / float(len(mus_subset))))
+                    # print('len_mus: ' + str(len(mus_subset)))
+                    # print('logvar_sub: ' + str(logvars_subset))
+                    # weights_subset = ((1 / float(len(mus_subset))) *
+                    #                   torch.ones(len(mus_subset)).to(self.device))
                     weights_subset = ((1 / float(len(mus_subset))) *
                                       torch.ones(len(mus_subset)))
                     s_mu, s_logvar = self.modalitiy_fusion(mus_subset, logvars_subset, weights_subset)
@@ -223,13 +233,21 @@ class BaseMMVae(ABC, pl.LightningModule):
                         mus = torch.cat((mus, s_mu.unsqueeze(0)), dim=0)
                         logvars = torch.cat((logvars, s_logvar.unsqueeze(0)), dim=0)
         if self.flags.modality_jsd:
+            # mus = torch.cat((mus, torch.zeros(1, num_samples,
+            #                                   self.flags.class_dim).to(self.device)), dim=0)
+            # logvars = torch.cat((logvars, torch.zeros(1, num_samples,
+            #                                           self.flags.class_dim).to(self.device)), dim=0)
             mus = torch.cat((mus, torch.zeros(1, num_samples,
-                                              self.flags.class_dim).to(self.device)), dim=0)
+                                              self.flags.class_dim)), dim=0)
             logvars = torch.cat((logvars, torch.zeros(1, num_samples,
-                                                      self.flags.class_dim).to(self.device)), dim=0)
-        weights = (1 / float(mus.shape[0])) * torch.ones(mus.shape[0]).to(self.device)
+                                                      self.flags.class_dim)), dim=0)
+        weights = (1 / float(mus.shape[0])) * torch.ones(mus.shape[0])  # .to(self.device)
+        # print('shape_mus: ' + str(mus.shape[0]))
+        # print('shape_logv: ' + str(logvars.shape[0]))
+        # print(('weights: ' + str(weights)))
         joint_mu, joint_logvar = self.moe_fusion(mus, logvars, weights)
         latents['mus'] = mus
+        # print('mus: ' + str(mus))
         latents['logvars'] = logvars
         latents['weights'] = weights
         latents['joint'] = [joint_mu, joint_logvar]
@@ -241,8 +259,8 @@ class BaseMMVae(ABC, pl.LightningModule):
         if num_samples is None:
             num_samples = self.flags.batch_size
         # need to handle this device calls
-        mu = torch.zeros(num_samples, self.flags.class_dim).to(self.device)
-        logvar = torch.zeros(num_samples, self.flags.class_dim).to(self.device)
+        mu = torch.zeros(num_samples, self.flags.class_dim)  # .to(self.device)
+        logvar = torch.zeros(num_samples, self.flags.class_dim)  # .to(self.device)
         z_class = self.reparameterize(mu, logvar)
         z_styles = self.get_random_styles(num_samples)
         random_latents = {'content': z_class, 'style': z_styles}
@@ -284,8 +302,8 @@ class BaseMMVae(ABC, pl.LightningModule):
         styles = dict()
         for k, m_key in enumerate(self.modalities.keys()):
             mod = self.modalities[m_key]
-            s_mu = torch.zeros(num_samples, mod.style_dim)
-            s_logvar = torch.zeros(num_samples, mod.style_dim)
+            s_mu = torch.zeros(num_samples, mod.style_dim)  # .to(self.device)
+            s_logvar = torch.zeros(num_samples, mod.style_dim)  # .to(self.device)
             styles[m_key] = [s_mu, s_logvar]
         return styles
 

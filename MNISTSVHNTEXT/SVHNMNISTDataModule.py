@@ -17,7 +17,7 @@ from MNISTSVHNTEXT.SVHNMNISTDataset import SVHNMNIST
 
 class SVHNMNISTDataModule(pl.LightningDataModule):
     def __init__(self, flags, alphabet):
-        super(SVHNMNISTDataModule, self).__init__()
+        super(SVHNMNISTDataModule, self).__init__(flags.dir_data)
         self.test = None
         self.flags = flags
         self.val = None
