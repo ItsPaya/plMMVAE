@@ -55,7 +55,7 @@ def calculate_coherence(exp, samples):
     return c_labels
 
 
-def test_generation(epoch, exp, dm):
+def test_generation(exp, dm):
     mods = exp.modalities
     mm_vae = exp
     subsets = exp.subsets
@@ -74,8 +74,8 @@ def test_generation(epoch, exp, dm):
 
     d_loader = dm.test_dataloader()
 
-    num_batches_epoch = int(dm.dataset_test.__len__() / float(exp.flags.batch_size))
-    cnt_s = 0
+    # num_batches_epoch = int(dm.dataset_test.__len__() / float(exp.flags.batch_size))
+    # cnt_s = 0
     for iteration, batch in enumerate(d_loader):
         batch_d = batch[0]
         batch_l = batch[1]

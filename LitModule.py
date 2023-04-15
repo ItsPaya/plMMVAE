@@ -28,7 +28,7 @@ class LitModule(BaseMMVae):
     def __init__(self, flags, modalities, subsets, plot_img_size, font):
         # flags.device = self.device
         super().__init__(flags, modalities, subsets)
-        # self.clfs = self.set_clfs()
+        self.clfs = self.set_clfs()
         self.num_modalities = len(self.modalities.keys())
         self.rec_weights = self.set_rec_weights()
         self.style_weights = self.set_style_weights()
@@ -51,18 +51,19 @@ class LitModule(BaseMMVae):
         latents = results['latents']
         l_mods = latents['modalities']
 
-        self.log_dict({'train_loss': total_loss.data.item(), 'train_log_probs': log_probs,
-                       'train_klds': klds}, on_epoch=False, on_step=True)
+        self.log('train_loss', total_loss.data.item(), prog_bar=True, on_step=True, on_epoch=True)
+        self.log_dict({'train_log_probs': log_probs,
+                       'train_klds': klds}, on_epoch=True, on_step=True)
         self.log('train_group_divergence', {'group_div': results['joint_divergence'].item()},
-                 on_epoch=False, on_step=True)
+                 on_epoch=True, on_step=True)
         for k, key in enumerate(l_mods.keys()):
             if not l_mods[key][0] is None:
-                self.log_dict({'train_mu': l_mods[key][0].mean().item()}, on_epoch=False, on_step=True)
+                self.log_dict({'train_mu': l_mods[key][0].mean().item()}, on_epoch=True, on_step=True)
             if not l_mods[key][1] is None:
-                self.log('train_logvar', l_mods[key][1].mean().item(), on_epoch=False, on_step=True)
+                self.log('train_logvar', l_mods[key][1].mean().item(), on_epoch=True, on_step=True)
         # self.logger.write_training_logs(results, total_loss, log_probs, klds)
 
-        return basic_routine
+        return basic_routine['loss']
 
     def validation_step(self, batch, batch_idx):
         basic_routine = self.basic_routine(batch)
@@ -77,17 +78,18 @@ class LitModule(BaseMMVae):
         latents = results['latents']
         l_mods = latents['modalities']
 
-        self.log_dict({'val_loss': total_loss.data.item(), 'val_log_probs': log_probs,
-                       'val_klds': klds}, on_epoch=False, on_step=True)
-        self.log('val_group_divergence', {'group_div': results['joint_divergence'].item()},
-                 on_epoch=False, on_step=True)
+        self.log('val_loss', total_loss.data.item(), prog_bar=True, on_step=True, on_epoch=True)
+        self.log_dict({'val_log_probs': log_probs,
+                       'val_klds': klds}, on_epoch=True, on_step=True)
+        self.log('val_group_divergence', results['joint_divergence'].item(),
+                 on_epoch=True, on_step=True, prog_bar=True)
         for k, key in enumerate(l_mods.keys()):
             if not l_mods[key][0] is None:
-                self.log_dict({'val_mu': l_mods[key][0].mean().item()}, on_epoch=False, on_step=True)
+                self.log_dict({'val_mu': l_mods[key][0].mean().item()}, on_epoch=True, on_step=True)
             if not l_mods[key][1] is None:
-                self.log('val_logvar', l_mods[key][1].mean().item(), on_epoch=False, on_step=True)
+                self.log('val_logvar', l_mods[key][1].mean().item(), on_epoch=True, on_step=True)
 
-        return basic_routine
+        return basic_routine['loss']
 
     def test_step(self, batch, batch_idx):
         basic_routine = self.basic_routine(batch)
@@ -101,17 +103,56 @@ class LitModule(BaseMMVae):
         latents = results['latents']
         l_mods = latents['modalities']
 
-        self.log_dict({'test_loss': total_loss})
-        self.log_dict({'ts_log_probs': log_probs, 'ts_klds': klds}, on_epoch=False, on_step=True)
+        self.log_dict({'test_loss': total_loss}, on_epoch=True, on_step=True, prog_bar=True)
+        self.log_dict({'ts_log_probs': log_probs, 'ts_klds': klds}, on_epoch=True, on_step=True)
         self.log_dict({'ts_group_div': results['joint_divergence'].item()},
-                      on_epoch=False, on_step=True)
+                      on_epoch=True, on_step=True, prog_bar=True)
         for k, key in enumerate(l_mods.keys()):
             if not l_mods[key][0] is None:
-                self.log_dict({'ts_mu': l_mods[key][0].mean().item()}, on_epoch=False, on_step=True)
+                self.log_dict({'ts_mu': l_mods[key][0].mean().item()}, on_epoch=True, on_step=True)
             if not l_mods[key][1] is None:
-                self.log('ts_logvar', l_mods[key][1].mean().item(), on_epoch=False, on_step=True)
+                self.log('ts_logvar', l_mods[key][1].mean().item(), on_epoch=True, on_step=True)
 
-        return basic_routine
+        return basic_routine['loss']
+
+    def on_test_epoch_end(self):
+        self.test_samples = self.get_test_samples()
+        epoch = self.current_epoch
+        plots = generate_plots(self, epoch)
+        for k, p_key in enumerate(plots.keys()):
+            ps = plots[p_key]
+            for l, name in enumerate(ps.keys()):
+                fig = ps[name]
+                self.logger.experiment.add_image(p_key + '_' + name,
+                                                 fig, epoch, dataformats='HWC')
+
+        if (epoch + 1) % self.flags.eval_freq == 0 or (epoch + 1) == self.flags.end_epoch:
+            if self.flags.eval_lr:
+                clf_lr = train_clf_lr_all_subsets(self, self.trainer.datamodule)
+                lr_eval = test_clf_lr_all_subsets(epoch, clf_lr, self, self.trainer.datamodule)
+                for s, l_key in enumerate(sorted(lr_eval.keys())):
+                    self.log('Latent Representation/%s' % l_key,
+                             lr_eval[l_key], on_epoch=True)
+
+            if self.flags.use_clf:
+                gen_eval = test_generation(self, self.trainer.datamodule)
+                for j, l_key in enumerate(sorted(gen_eval['cond'].keys())):
+                    for k, s_key in enumerate(gen_eval['cond'][l_key].keys()):
+                        self.log('Generation/%s/%s' %
+                                 (l_key, s_key),
+                                 gen_eval['cond'][l_key][s_key],
+                                 on_epoch=True)
+                self.log('Generation/Random', gen_eval['random'], on_epoch=True)
+
+            if self.flags.calc_nll:
+                lhoods = estimate_likelihoods(self, self.trainer.datamodule)
+                for k, key in enumerate(sorted(lhoods.keys())):
+                    self.log('Likelihoods/%s' % key,
+                             lhoods[key], on_epoch=True)
+
+            if self.flags.calc_prd and ((epoch + 1) % self.flags.eval_freq_fid == 0):
+                prd_scores = calc_prd_score(self)
+                self.log('PRD', prd_scores, on_epoch=True)
 
     def configure_optimizers(self):
         optimizer = optim.Adam(
@@ -280,7 +321,7 @@ class LitModule(BaseMMVae):
             if key.endswith('style'):
                 mu, logvar = latents[key]
                 klds[key] = calc_kl_divergence(mu, logvar,
-                                                    norm_value=self.flags.batch_size)
+                                               norm_value=self.flags.batch_size)
         return klds
 
     def calc_style_kld(self, klds):

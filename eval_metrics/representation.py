@@ -16,11 +16,29 @@ from sklearn.metrics import accuracy_score
 from sklearn.linear_model import LogisticRegression
 
 
-def train_clf_lr_all_subsets(exp, dl, dataset):
+def train_clf_lr_all_subs(exp, batch, num_samples):
     mm_vae = exp
     subsets = exp.subsets
+    bs = exp.flags.batch_size
+    class_dim = exp.flags.class_dim
+    data_train = dict()
+    for k, s_key in enumerate(subsets.keys()):
+        if s_key != '':
+            data_train[s_key] = np.zeros((num_samples, class_dim))
+    all_labels = np.zeros((num_samples, len(exp.labels)))
+    batch_d = batch[0]
+    batch_l = batch[1]
+    for k, m_key in enumerate(batch_d.keys()):
+        batch_d[m_key] = batch_d[m_key].to(exp.flags.device)
+    inferred = mm_vae.inference(batch_d)
+    lr_subsets = inferred['subsets']
 
-    d_loader = dl
+
+def train_clf_lr_all_subsets(exp, dm):
+    mm_vae = exp
+    subsets = exp.subsets
+    dataset = dm.dataset_train
+    d_loader = dm.train_dataloader()
 
     bs = exp.flags.batch_size
     # num_batches_epoch = int(dataset.__len__() / float(bs))
@@ -40,7 +58,7 @@ def train_clf_lr_all_subsets(exp, dl, dataset):
         all_labels[(it * bs):((it + 1) * bs), :] = np.reshape(batch_l, (bs,
                                                                         len(exp.labels)))
         for k, key in enumerate(lr_subsets.keys()):
-            data_train[key][(it * bs):((it + 1) * bs), :] = lr_subsets[key][0]  # .cpu().data.numpy()
+            data_train[key][(it * bs):((it + 1) * bs), :] = lr_subsets[key][0].cpu().data.numpy()
 
     n_train_samples = exp.flags.num_training_samples_lr
     rand_ind_train = np.random.randint(n_samples, size=n_train_samples)
@@ -53,7 +71,7 @@ def train_clf_lr_all_subsets(exp, dl, dataset):
     return clf_lr
 
 
-def test_clf_lr_all_subsets(epoch, clf_lr, exp, dl):
+def test_clf_lr_all_subsets(epoch, clf_lr, exp, dm):
     mm_vae = exp
     subsets = exp.subsets
 
@@ -64,7 +82,7 @@ def test_clf_lr_all_subsets(epoch, clf_lr, exp, dl):
             if s_key != '':
                 lr_eval[label_str][s_key] = []
 
-    d_loader = dl
+    d_loader = dm.test_dataloader()
 
     # num_batches_epoch = int(dataset.__len__() / float(exp.flags.batch_size))
     for iteration, batch in enumerate(d_loader):

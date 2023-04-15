@@ -21,8 +21,8 @@ from utils.filehandling import create_dir_structure
 
 if __name__ == '__main__':
     FLAGS = parser.parse_args()
-    # use_cuda = torch.cuda.is_available()
-    # FLAGS.device = torch.device('cuda' if use_cuda else 'cpu')
+    use_cuda = torch.cuda.is_available()
+    FLAGS.device = torch.device('cuda' if use_cuda else 'cpu')
 
     if FLAGS.method == 'poe':
         FLAGS.modality_poe = True
@@ -44,7 +44,6 @@ if __name__ == '__main__':
                               FLAGS.div_weight_m2_content, FLAGS.div_weight_m3_content]
 
     FLAGS = create_dir_structure(FLAGS)
-
 
     # set configs here
     parser2 = argparse.ArgumentParser()
@@ -86,17 +85,17 @@ if __name__ == '__main__':
     font = ImageFont.truetype(font=config['data_params']['font_file'], size=38)
 
     config.num_features = len(alphabet)
+    FLAGS.num_features = len(alphabet)
 
     dm = SVHNMNISTDataModule(config, alphabet)
-    mm_vae = MultiModVAE(config, FLAGS)
-    writer = SummaryWriter(mm_vae.flags.dir_logs)
+    mm_vae = MultiModVAE(config, FLAGS, font, plot_img_size)
     tb_logger = TensorBoardLogger(save_dir=config['logging_params']['save_dir'],
                                   name=config['model_params']['name'])
 
     # For reproducibility
     seed_everything(config['exp_params']['manual_seed'], True)
 
-    trainer = pl.Trainer(devices=1, max_epochs=2, fast_dev_run=True, logger=tb_logger,
+    trainer = pl.Trainer(devices='auto', accelerator='auto', max_epochs=2, fast_dev_run=True, logger=tb_logger,
                          callbacks=[TQDMProgressBar(refresh_rate=20)])
 
     trainer.fit(mm_vae, datamodule=dm)

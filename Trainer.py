@@ -92,8 +92,8 @@ def set_subsets():
 
 if __name__ == '__main__':
     FLAGS = parser.parse_args()
-    # use_cuda = torch.cuda.is_available()
-    # FLAGS.device = torch.device('cuda' if use_cuda else 'cpu')
+    use_cuda = torch.cuda.is_available()
+    FLAGS.device = torch.device('cuda' if use_cuda else 'cpu')
 
     if FLAGS.method == 'poe':
         FLAGS.modality_poe = True
@@ -156,12 +156,13 @@ if __name__ == '__main__':
     # tb_logger = TBLogger(writer)
     logger2 = TensorBoardLogger("tb_logs", name="Lit_Model")
 
-    trainer = Trainer(devices=1, accelerator='auto', max_epochs=3, fast_dev_run=False, logger=logger2,
+    trainer = Trainer(devices=1, accelerator='auto', max_epochs=1, fast_dev_run=False,
+                      logger=logger2,
                       callbacks=[TQDMProgressBar(refresh_rate=20)])
 
     trainer.fit(mm_vae, dm)
     # trainer.validate(mm_vae, dm)
 
-    # result = trainer.test(mm_vae, datamodule=dm)
+    result = trainer.test(mm_vae, datamodule=dm)
 
-    # print(result)
+    print(result)

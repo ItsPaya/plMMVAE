@@ -98,12 +98,13 @@ def calc_log_likelihood_batch(exp, latents, subset_key, subset, batch, num_imp_s
     return ll
 
 
-def estimate_likelihoods(exp, dl):
+def estimate_likelihoods(exp, dm):
     model = exp
     mods = exp.modalities
     bs_normal = exp.flags.batch_size
     exp.flags.batch_size = 64
-    d_loader = dl
+    d_loader = DataLoader(dm.dataset_test, batch_size=exp.flags.batch_size,
+                          shuffle=True, num_workers=4, drop_last=True)
 
     subsets = exp.subsets
     lhoods = dict()

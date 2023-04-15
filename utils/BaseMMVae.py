@@ -18,7 +18,7 @@ from utils.utils import reweight_weights
 from utils.utils import mixture_component_selection
 
 
-class BaseMMVae(ABC, lp.LightningModule):
+class BaseMMVae(ABC, pl.LightningModule):
     def __init__(self, flags, modalities, subsets):
         super(BaseMMVae, self).__init__()
         self.num_modalities = len(modalities.keys())
@@ -302,8 +302,8 @@ class BaseMMVae(ABC, lp.LightningModule):
         styles = dict()
         for k, m_key in enumerate(self.modalities.keys()):
             mod = self.modalities[m_key]
-            s_mu = torch.zeros(num_samples, mod.style_dim)  # .to(self.device)
-            s_logvar = torch.zeros(num_samples, mod.style_dim)  # .to(self.device)
+            s_mu = torch.zeros(num_samples, mod.style_dim).to(self.device)
+            s_logvar = torch.zeros(num_samples, mod.style_dim).to(self.device)
             styles[m_key] = [s_mu, s_logvar]
         return styles
 
