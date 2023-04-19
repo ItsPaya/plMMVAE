@@ -26,7 +26,8 @@ class SVHN(Modality):
         write_samples_img_to_file(d, fn, img_per_row)
 
     def plot_data(self, d):
-        out = self.transform_plot(d.squeeze(0).cpu()).cuda().unsqueeze(0)
+        # out = self.transform_plot(d.squeeze(0).cpu()).cuda().unsqueeze(0)
+        out = self.transform_plot(d.squeeze(0).cpu()).unsqueeze(0)
         return out
 
     def get_plot_transform(self):

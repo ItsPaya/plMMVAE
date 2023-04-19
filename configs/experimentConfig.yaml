@@ -1,0 +1,129 @@
+exp_name: mst  # set desired name
+# data parameters
+dataset: 'SVHN_MNIST_text' # select SVHN_MNIST_text of MMNIST
+
+batch_size: 256
+num_workers: 4
+drop_last: True
+class_dim: 20
+font_file: 'FreeSerif.ttf'
+labels:
+
+method: 'poe' # choose method for training the model
+method_mods:
+  modality_jsd: False
+  modality_poe: False
+  modality_moe: False
+  joint_elbo: False
+  poe_unimodal_elbos: True
+  factorized_representation: False
+  # MMNIST
+  include_prior_expert: False # is this the same as fac rep?
+
+dir:
+  # both
+  data_path: '../data'
+  clf_path: '../clf'
+  fid_path: None #MMNIST ../MMNIST
+  inception_path: '../inception_state_dict.pth'
+  # MMNIST
+  pretrained_clf_paths: '../trained_classifiers/trained_clfs_polyMNIST/pretrained_img_to_digit_clf_m'{0..4}
+# MMNIST
+unimodal_datapath:
+  train: '../data/MMNIST/train/m'{0..4}
+  test: '../data/MMNIST/test/m'{0..4}
+
+# change modalities here for mst(m1: mnist, m2: svhn, m3:text) o/w need to adjust code
+modality_1:
+  mod_type: 'mnist'
+  encoder: 'IMG'
+  decoder: 'IMG'
+  likelihood: 'laplace'
+modality_2:
+  mod_type: 'svhn'
+  encoder: 'SVHN'
+  decoder: 'SVHN'
+  likelihood: 'laplace'
+modality_3:
+  mod_type: 'text'
+  encoder: 'Text'
+  decoder: 'Text'
+  likelihood: 'categorical'
+
+# exp_params:
+LR: 0.005 #0.0005 in job_polyMnist
+manual_seed: 1265
+beta_values:
+  beta: 0.5 #MMNIST and mst 2.5
+  beta_1: 0.9
+  beta_2: 0.999
+  beta_style: 1.0
+  beta_content: 1.0
+  beta_m1_style: 1.0
+  beta_m2_style: 1.0
+  beta_m3_style: 1.0
+div_weight:
+  # MMNIST
+  div_weight:   # None, then use 1/num_mods+1
+  # SVHN_MNIST_text
+  div_weight_m1_content: 0.25
+  div_weight_m2_content: 0.25
+  div_weight_m3_content: 0.25
+  # both
+  div_weight_uniform_content: 0.25 # MMNIST None, then use 1/num_mods+1
+evaluation:
+  use_clf: False # should generate samples be classified (default=False)
+  calc_nll: False # calculation of nll (default=False)
+  eval_lr: False # can probably be done by lightning trainer (default=False)
+  calc_prd: False # calculation of prec-rec for gen model (default=False)
+  eval_freq: 10 # freq of eval of latent representation of generative performance (in # of epochs) | (default=10)
+  eval_freq_fid: 10 # freq of eval of latent representation of generative performance (in # epochs) | (default=10)
+  num_samples_fid: 10000 # numer of samples the calculation of fid is based on (default=10000)
+  num_train_samples_lr: 500 # number of training samples to train the lr clf (default=500)
+  save_figure: False # (default=False)
+  # MMNIST
+  subsampled_reconstruction: True # (default=True)
+# data_dependent:
+# MMNIST
+style_dim: 0
+img_size_m1: 28
+num_channels_m1: 1
+img_size_m2: 32
+num_channels_m2: 3
+likelihood: 'laplace'
+kl_annealing: 0
+
+# SVHN_MNIST_text
+style_m1_dim: 0
+style_m2_dim: 0
+style_m3_dim: 0
+likelihood_m1: 'laplace' # output distribution
+likelihood_m2: 'laplace' # output distribution
+likelihood_m3: 'categorical' # output distribution
+
+# both
+len_sequence: 8 # (default=8)
+num_classes: 10 # number of classes on which the dataset trained (default=10)
+dim: 64 #(default=64)
+data_multi: 20 # number of pairs per sample
+num_hidden_layers: 1 #(default=1)
+
+# save and load SVHN_MNIST_text
+encoder_save_m1: 'encoderM1'
+encoder_save_m2: 'encoderM2'
+encoder_save_m3: 'encoderM3'
+decoder_save_m1: 'decoderM1'
+decoder_save_m2: 'decoderM2'
+decoder_save_m3: 'decoderM3'
+clf_save_m1: 'clf_m1'
+clf_save_m2: 'clf_m2'
+clf_save_m3: 'clf_m3'
+
+trainer_params:
+  device: 'auto'
+  accelerator: 'auto'
+  max_epochs: 100
+
+logging_params:
+  save_dir: "logs/"
+  name: "svhn_mnist_text"

@@ -39,7 +39,7 @@ def calculate_coherence(exp, samples):
     # TODO: make work for num samples NOT EQUAL to batch_size
     c_labels = dict()
     for j, l_key in enumerate(exp.labels):
-        pred_mods = np.zeros((len(mods.keys()), exp.flags.batch_size))
+        pred_mods = np.zeros((len(mods.keys()), exp.config.batch_size))
         for k, m_key in enumerate(mods.keys()):
             mod = mods[m_key]
             clf_mod = clfs[mod.name]
@@ -50,14 +50,14 @@ def calculate_coherence(exp, samples):
             pred_mod = np.argmax(output_prob_mod, axis=1).astype(int)
             pred_mods[k, :] = pred_mod
         coh_mods = np.all(pred_mods == pred_mods[0, :], axis=0)
-        coherence = np.sum(coh_mods.astype(int)) / float(exp.flags.batch_size)
+        coherence = np.sum(coh_mods.astype(int)) / float(exp.config.batch_size)
         c_labels[l_key] = coherence
     return c_labels
 
 
 def test_generation(exp, dm):
     mods = exp.modalities
-    mm_vae = exp
+    mm_vae = exp.mm_vae
     subsets = exp.subsets
 
     gen_perf = dict()
@@ -74,7 +74,7 @@ def test_generation(exp, dm):
 
     d_loader = dm.test_dataloader()
 
-    # num_batches_epoch = int(dm.dataset_test.__len__() / float(exp.flags.batch_size))
+    # num_batches_epoch = int(dm.dataset_test.__len__() / float(exp.config.batch_size))
     # cnt_s = 0
     for iteration, batch in enumerate(d_loader):
         batch_d = batch[0]
@@ -84,7 +84,7 @@ def test_generation(exp, dm):
         for j, l_key in enumerate(exp.labels):
             gen_perf['random'][l_key].append(coherence_random[l_key])
 
-        if (exp.flags.batch_size * iteration) < exp.flags.num_samples_fid:
+        if (exp.config.batch_size * iteration) < exp.config.evaluation['num_samples_fid']:
             save_generated_samples_singlegroup(exp, iteration,
                                                'random',
                                                rand_gen)
@@ -102,7 +102,7 @@ def test_generation(exp, dm):
             for j, l_key in enumerate(exp.labels):
                 for m, m_key in enumerate(mods.keys()):
                     gen_perf['cond'][l_key][s_key][m_key].append(clf_cg[l_key][m_key])
-            if (exp.flags.batch_size * iteration) < exp.flags.num_samples_fid:
+            if (exp.config.batch_size * iteration) < exp.config.num_samples_fid:
                 save_generated_samples_singlegroup(exp, iteration,
                                                    s_key,
                                                    cg[s_key])

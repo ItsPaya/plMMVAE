@@ -1,10 +1,4 @@
-import os
-
-import torch
-import torch.nn as nn
-
-from utils import utils
-from utils.BaseMMVae import BaseMMVae
+from utils.BaseMMVae_conf import BaseMMVae
 import pytorch_lightning as pl
 
 

@@ -1,5 +1,6 @@
 import os
 import random
+from abc import ABC
 from itertools import chain, combinations
 
 import numpy as np
@@ -20,27 +21,37 @@ from plotting import generate_plots
 from MNISTSVHNTEXT.ConvNetImgMNIST import EncoderImg, DecoderImg
 from MNISTSVHNTEXT.ConvNetImgSVHN import EncoderSVHN, DecoderSVHN
 from MNISTSVHNTEXT.ConvNetTextMNIST import EncoderText, DecoderText
+from MMNIST.ConvNetworksImgCMNIST import EncoderImg as EncImgCMNIST
+from MMNIST.ConvNetworksImgCMNIST import DecoderImg as DecImgCMNIST
+
 from MNISTSVHNTEXT.VAEtrimodalSVHNMNIST import VAEtrimodalSVHNMNIST
+from MMNIST.VAEMMNIST import VAEMMNIST
+
 from MNISTSVHNTEXT.ConvNetImgClfMNIST import ClfImg as ClfImgMNIST
 from MNISTSVHNTEXT.ConvNetImgClfSVHN import ClfImgSVHN
 from MNISTSVHNTEXT.ConvNetTextClf import ClfText as ClfText
+from MMNIST.ConvNetworkImgClfCMNIST import ClfImg as ClfImgCMNIST
+
 from modalities.MNIST import MNIST
 from modalities.SVHN import SVHN
 from modalities.Text import Text
+from modalities.CMNIST import CMNIST
 from utils import utils
 
 
-class MultiModVAE(pl.LightningModule):
-    def __init__(self, config, flags, font, plot_img_size):
+class MultiModVAE(pl.LightningModule, ABC):
+    def __init__(self, config, font, plot_img_size, alphabet):
         super().__init__()
         self.config = config
-        self.flags = flags
         self.plot_img_size = plot_img_size
         self.font = font
+        self.alphabet = alphabet
+        self.config.num_features = len(alphabet)
 
-        self.subsets = self.set_subsets()
         self.modalities = self.set_modalities()  # get from config
+        self.subsets = self.set_subsets()
         self.num_modalities = len(self.modalities.keys())
+
         self.mm_vae = self.get_model()  # get from config
         self.clfs = self.set_clfs()  # get from config
         self.optimizer = None
@@ -48,14 +59,18 @@ class MultiModVAE(pl.LightningModule):
         self.style_weights = self.set_style_weights()
 
         self.test_samples = None
-        self.eva_metric = accuracy_score
+        self.eval_metric = accuracy_score
         self.paths_fid = self.set_paths_fid()
 
         self.labels = ['digit']
 
     def get_model(self):
         # make it to choose model via config? with provided params
-        model = VAEtrimodalSVHNMNIST(self.flags, self.modalities, self.subsets)
+        if self.config.dataset == 'MMNIST':
+            model = VAEMMNIST(self.config, self.modalities, self.subsets)
+        else:
+            model = VAEtrimodalSVHNMNIST(self.config, self.modalities, self.subsets)
+        model = model.to(self)
         return model
 
     def training_step(self, batch, batch_idx):
@@ -143,15 +158,16 @@ class MultiModVAE(pl.LightningModule):
                 self.logger.experiment.add_image(p_key + '_' + name,
                                                  fig, epoch, dataformats='HWC')
 
-        if (epoch + 1) % self.flags.eval_freq == 0 or (epoch + 1) == self.flags.end_epoch:
-            if self.flags.eval_lr:
+        if (epoch + 1) % self.config.evaluation['eval_freq'] == 0 or\
+                (epoch + 1) == self.config.trainer_params['max_epoch']:
+            if self.config.evaluation['eval_lr']:
                 clf_lr = train_clf_lr_all_subsets(self, self.trainer.datamodule)
                 lr_eval = test_clf_lr_all_subsets(epoch, clf_lr, self, self.trainer.datamodule)
                 for s, l_key in enumerate(sorted(lr_eval.keys())):
                     self.log('Latent Representation/%s' % l_key,
                              lr_eval[l_key], on_epoch=True)
 
-            if self.flags.use_clf:
+            if self.config.evaluation['use_clf']:
                 gen_eval = test_generation(self, self.trainer.datamodule)
                 for j, l_key in enumerate(sorted(gen_eval['cond'].keys())):
                     for k, s_key in enumerate(gen_eval['cond'][l_key].keys()):
@@ -161,20 +177,20 @@ class MultiModVAE(pl.LightningModule):
                                  on_epoch=True)
                 self.log('Generation/Random', gen_eval['random'], on_epoch=True)
 
-            if self.flags.calc_nll:
+            if self.config.evaluation['calc_nll']:
                 lhoods = estimate_likelihoods(self, self.trainer.datamodule)
                 for k, key in enumerate(sorted(lhoods.keys())):
                     self.log('Likelihoods/%s' % key,
                              lhoods[key], on_epoch=True)
 
-            if self.flags.calc_prd and ((epoch + 1) % self.flags.eval_freq_fid == 0):
+            if self.config.evaluation['calc_prd'] and ((epoch + 1) % self.config.evaluation['eval_freq_fid'] == 0):
                 prd_scores = calc_prd_score(self)
                 self.log('PRD', prd_scores, on_epoch=True)
 
     def basic_routine(self, batch):
-        beta_style = self.flags.beta_style
-        beta_content = self.flags.beta_content
-        beta = self.flags.beta
+        beta_style = self.config.beta_values['beta_style']
+        beta_content = self.config.beta_values['beta_content']
+        beta = self.config.beta_values['beta']
         rec_weight = 1.0
 
         batch_d = batch[0]
@@ -190,35 +206,35 @@ class MultiModVAE(pl.LightningModule):
         group_divergence = results['joint_divergence']
 
         klds = self.calc_klds(results)
-        if self.flags.factorized_representation:
+        if self.config.method_mods['factorized_representation']:
             klds_style = self.calc_klds_style(results)
 
-        if (self.flags.modality_jsd or self.flags.modality_moe or
-                self.flags.joint_elbo):
-            if self.flags.factorized_representation:
+        if (self.config.method_mods['modality_jsd'] or self.config.method_mods['modality_moe'] or
+                self.config.method_mods['joint_elbo']):
+            if self.config.method_mods['factorized_representation']:
                 kld_style = self.calc_style_kld(klds_style)
             else:
                 kld_style = 0.0
             kld_content = group_divergence
             kld_weighted = beta_style * kld_style + beta_content * kld_content
             total_loss = rec_weight * weighted_log_prob + beta * kld_weighted
-        elif self.flags.modality_poe:
+        elif self.config.method_mods['modality_poe']:
             klds_joint = {'content': group_divergence,
                           'style': dict()}
             elbos = dict()
             for m, m_key in enumerate(mods.keys()):
                 mod = mods[m_key]
-                if self.flags.factorized_representation:
+                if self.config.method_mods['factorized_representation']:
                     kld_style_m = klds_style[m_key + '_style']
                 else:
                     kld_style_m = 0.0
                 klds_joint['style'][m_key] = kld_style_m
-                if self.flags.poe_unimodal_elbos:
+                if self.config.method_mods['poe_unimodal_elbos']:
                     i_batch_mod = {m_key: batch_d[m_key]}
                     r_mod = self(i_batch_mod)
                     log_prob_mod = -mod.calc_log_prob(r_mod['rec'][m_key],
                                                       batch_d[m_key],
-                                                      self.flags.batch_size)
+                                                      self.config.batch_size)
                     log_prob = {m_key: log_prob_mod}
                     klds_mod = {'content': klds[m_key],
                                 'style': {m_key: kld_style_m}}
@@ -239,35 +255,56 @@ class MultiModVAE(pl.LightningModule):
     def configure_optimizers(self):
         optimizer = optim.Adam(
             list(self.model.parameters()),
-            lr=self.config.lr,
-            betas=(self.config.beta_1, self.config.beta_2))
+            lr=self.config.LR,
+            betas=(self.config.beta_values['beta_1'],
+                   self.config.beta_values['beta_2)']))
         return optimizer
 
     def set_rec_weights(self):
         rec_weights = dict()
-        ref_mod_d_size = self.modalities['svhn'].data_size.numel()
-        for k, m_key in enumerate(self.modalities.keys()):
-            mod = self.modalities[m_key]
-            numel_mod = mod.data_size.numel()
-            rec_weights[mod.name] = float(ref_mod_d_size / numel_mod)
+        if self.config.dataset == 'SVHN_MNIST_text':
+            ref_mod_d_size = self.modalities['svhn'].data_size.numel()
+            for k, m_key in enumerate(self.modalities.keys()):
+                mod = self.modalities[m_key]
+                numel_mod = mod.data_size.numel()
+                rec_weights[mod.name] = float(ref_mod_d_size / numel_mod)
+        elif self.config.dataset == 'MMNIST':
+            for k, m_key in enumerate(self.modalities.keys()):
+                mod = self.modalities[m_key]
+                numel_mod = mod.data_size.numel()
+                rec_weights[mod.name] = 1.0
+        else:
+            raise NotImplementedError
         return rec_weights
 
     def set_style_weights(self):
-        weights = dict()
-        weights['mnist'] = self.flags.beta_m1_style
-        weights['svhn'] = self.flags.beta_m2_style
-        weights['text'] = self.flags.beta_m3_style
+        if self.config.dataset == 'SVHN_MNIST_text':
+            weights = dict()
+            weights['mnist'] = self.config.beta_values['beta_m1_style']
+            weights['svhn'] = self.config.beta_values['beta_m2_style']
+            weights['text'] = self.config.beta_values['beta_m3_style']
+        elif self.config.dataset == 'MMNIST':
+            weights = {"m%d" % m: self.config.beta_values['beta_style']
+                       for m in range(self.num_modalities)}
+        else:
+            raise NotImplementedError
         return weights
 
     def get_test_samples(self, num_images=10):
-        n_test = self.dataset_test.__len__()
+        dm = self.trainer.datamodule
+        dataset_test = dm.dataset_test
+        n_test = len(dataset_test)
         samples = []
         for i in range(num_images):
             while True:
-                sample, target = self.dataset_test.__getitem__(random.randint(0, n_test))
+                if self.config.dataset == 'MMNIST':
+                    ix = random.randint(0, n_test-1)
+                    sample, target = dataset_test[ix]
+                else:
+                    sample, target = dataset_test.__getitem__(random.randint(0, n_test))
                 if target == i:
                     for k, key in enumerate(sample):
-                        sample[key] = sample[key]
+                        sample[key] = sample[key].to(self)
                     samples.append(sample)
                     break
         return samples
@@ -284,44 +321,68 @@ class MultiModVAE(pl.LightningModule):
         return self.eval_metric(labels, pred)
 
     def set_clfs(self):
-        model_clf_m1 = None
-        model_clf_m2 = None
-        model_clf_m3 = None
-        if self.flags.use_clf:
-            model_clf_m1 = ClfImgMNIST()
-            model_clf_m1.load_state_dict(torch.load(os.path.join(self.flags.dir_clf,
-                                                                 self.flags.clf_save_m1)))
-            # model_clf_m1 = model_clf_m1.to(self.device)
+        # ToDo swap model creation to change from config
+        if self.config.dataset == 'SVHN_MNIST_text':
+            model_clf_m1 = None
+            model_clf_m2 = None
+            model_clf_m3 = None
+            if self.config.evaluation['use_clf']:
+                model_clf_m1 = ClfImgMNIST()
+                model_clf_m1.load_state_dict(torch.load(os.path.join(self.config.dir['dir_clf'],
+                                                                     self.config.clf_save_m1)))
+                # model_clf_m1 = model_clf_m1.to(self.device)
 
-            model_clf_m2 = ClfImgSVHN()
-            model_clf_m2.load_state_dict(torch.load(os.path.join(self.flags.dir_clf,
-                                                                 self.flags.clf_save_m2)))
-            # model_clf_m2 = model_clf_m2.to(self.device)
+                model_clf_m2 = ClfImgSVHN()
+                model_clf_m2.load_state_dict(torch.load(os.path.join(self.config.dir['dir_clf'],
+                                                                     self.config.clf_save_m2)))
+                # model_clf_m2 = model_clf_m2.to(self.device)
 
-            model_clf_m3 = ClfText(self.flags)
-            model_clf_m3.load_state_dict(torch.load(os.path.join(self.flags.dir_clf,
-                                                                 self.flags.clf_save_m3)))
-            # model_clf_m3 = model_clf_m3.to(self.device)
+                model_clf_m3 = ClfText(self.config)
+                model_clf_m3.load_state_dict(torch.load(os.path.join(self.config.dir['dir_clf'],
+                                                                     self.config.clf_save_m3)))
+                # model_clf_m3 = model_clf_m3.to(self.device)
 
-        clfs = {'mnist': model_clf_m1,
-                'svhn': model_clf_m2,
-                'text': model_clf_m3}
+            clfs = {'mnist': model_clf_m1,
+                    'svhn': model_clf_m2,
+                    'text': model_clf_m3}
+        elif self.config.dataset == 'MMNIST':
+            clfs = {"m%d" % m: None for m in range(self.num_modalities)}
+            if self.config.use_clf:
+                for m, fp in enumerate(self.config.dir['pretrained_clf_paths']):
+                    model_clf = ClfImgCMNIST()
+                    model_clf.load_state_dict(torch.load(fp))
+                    model_clf.to(self)
+                    clfs["m%d" % m] = model_clf
+                for m, clf in clfs.items():
+                    if clf is None:
+                        raise ValueError("Classifier is 'None' for modality %s" % str(m))
         return clfs
 
     def set_modalities(self):
-        mod1 = MNIST('mnist', EncoderImg(self.flags), DecoderImg(self.flags),
-                     self.flags.class_dim, self.flags.style_m1_dim, 'laplace')
-        mod2 = SVHN('svhn', EncoderSVHN(self.flags), DecoderSVHN(self.flags),
-                    self.flags.class_dim, self.flags.style_m2_dim, 'laplace',
-                    self.plot_img_size)
-        mod3 = Text('text', EncoderText(self.flags), DecoderText(self.flags),
-                    self.flags.class_dim, self.flags.style_m3_dim, 'categorical',
-                    self.flags.len_sequence,
-                    self.alphabet,
-                    self.plot_img_size,
-                    self.font)
-        mods = {mod1.name: mod1, mod2.name: mod2, mod3.name: mod3}
-        return mods
+        #TODO swap such that simply modify from config
+        if self.config.dataset == 'SVHN_MNIST_text':
+            mod1 = MNIST('mnist', EncoderImg(self.config), DecoderImg(self.config),
+                         self.config.class_dim, self.config.style_m1_dim, 'laplace')
+            mod2 = SVHN('svhn', EncoderSVHN(self.config), DecoderSVHN(self.config),
+                        self.config.class_dim, self.config.style_m2_dim, 'laplace',
+                        self.plot_img_size)
+            mod3 = Text('text', EncoderText(self.config), DecoderText(self.config),
+                        self.config.class_dim, self.config.style_m3_dim, 'categorical',
+                        self.config.len_sequence,
+                        self.alphabet,
+                        self.plot_img_size,
+                        self.font)
+            mods = {mod1.name: mod1, mod2.name: mod2, mod3.name: mod3}
+            return mods
+        elif self.config.dataset == 'MMNIST':
+            mods = [CMNIST("m%d" % m, EncImgCMNIST(self.config),
+                           DecImgCMNIST(self.config), self.config.class_dim,
+                           self.config.style_dim, self.config.likelihood) for m in
+                    range(self.num_modalities)]
+            mods_dict = {m.name: m for m in mods}
+            return mods_dict
+        else:
+            raise NotImplementedError
 
     def set_subsets(self):
         """
@@ -343,11 +404,11 @@ class MultiModVAE(pl.LightningModule):
         return subsets
 
     def set_paths_fid(self):
-        dir_real = os.path.join(self.flags.dir_gen_eval_fid, 'real')
-        dir_random = os.path.join(self.flags.dir_gen_eval_fid, 'random')
+        dir_real = os.path.join(self.config.dir_gen_eval_fid, 'real')
+        dir_random = os.path.join(self.config.dir_gen_eval_fid, 'random')
         paths = {'real': dir_real,
                  'random': dir_random}
-        dir_cond = self.flags.dir_gen_eval_fid
+        dir_cond = self.config.dir_gen_eval_fid
         for k, name in enumerate(self.subsets):
             paths[name] = os.path.join(dir_cond, name)
         print(paths.keys())

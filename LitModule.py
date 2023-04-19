@@ -113,9 +113,6 @@ class LitModule(BaseMMVae):
             if not l_mods[key][1] is None:
                 self.log('ts_logvar', l_mods[key][1].mean().item(), on_epoch=True, on_step=True)
 
-        return basic_routine['loss']
-
-    def on_test_epoch_end(self):
         self.test_samples = self.get_test_samples()
         epoch = self.current_epoch
         plots = generate_plots(self, epoch)
@@ -153,6 +150,11 @@ class LitModule(BaseMMVae):
             if self.flags.calc_prd and ((epoch + 1) % self.flags.eval_freq_fid == 0):
                 prd_scores = calc_prd_score(self)
                 self.log('PRD', prd_scores, on_epoch=True)
+
+        return basic_routine['loss']
+
+    # def on_test_epoch_end(self):
+
 
     def configure_optimizers(self):
         optimizer = optim.Adam(
@@ -277,7 +279,7 @@ class LitModule(BaseMMVae):
                 sample, target = dataset_test.__getitem__(random.randint(0, n_test))
                 if target == i:
                     for k, key in enumerate(sample):
-                        sample[key] = sample[key]
+                        sample[key] = sample[key].to(self)
                     samples.append(sample)
                     break
         return samples

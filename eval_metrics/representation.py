@@ -17,10 +17,10 @@ from sklearn.linear_model import LogisticRegression
 
 
 def train_clf_lr_all_subs(exp, batch, num_samples):
-    mm_vae = exp
+    mm_vae = exp.mm_vae
     subsets = exp.subsets
-    bs = exp.flags.batch_size
-    class_dim = exp.flags.class_dim
+    bs = exp.config.batch_size
+    class_dim = exp.config.class_dim
     data_train = dict()
     for k, s_key in enumerate(subsets.keys()):
         if s_key != '':
@@ -29,20 +29,20 @@ def train_clf_lr_all_subs(exp, batch, num_samples):
     batch_d = batch[0]
     batch_l = batch[1]
     for k, m_key in enumerate(batch_d.keys()):
-        batch_d[m_key] = batch_d[m_key].to(exp.flags.device)
+        batch_d[m_key] = batch_d[m_key].to(exp.device)
     inferred = mm_vae.inference(batch_d)
     lr_subsets = inferred['subsets']
 
 
 def train_clf_lr_all_subsets(exp, dm):
-    mm_vae = exp
+    mm_vae = exp.mm_vae
     subsets = exp.subsets
     dataset = dm.dataset_train
     d_loader = dm.train_dataloader()
 
-    bs = exp.flags.batch_size
+    bs = exp.config.batch_size
     # num_batches_epoch = int(dataset.__len__() / float(bs))
-    class_dim = exp.flags.class_dim
+    class_dim = exp.config.class_dim
     n_samples = int(dataset.__len__())
     data_train = dict()
     for k, s_key in enumerate(subsets.keys()):
@@ -60,7 +60,7 @@ def train_clf_lr_all_subsets(exp, dm):
         for k, key in enumerate(lr_subsets.keys()):
             data_train[key][(it * bs):((it + 1) * bs), :] = lr_subsets[key][0].cpu().data.numpy()
 
-    n_train_samples = exp.flags.num_training_samples_lr
+    n_train_samples = exp.config.evaluation['num_training_samples_lr']
     rand_ind_train = np.random.randint(n_samples, size=n_train_samples)
     labels = all_labels[rand_ind_train, :]
     for k, s_key in enumerate(subsets.keys()):
@@ -72,7 +72,7 @@ def train_clf_lr_all_subsets(exp, dm):
 
 
 def test_clf_lr_all_subsets(epoch, clf_lr, exp, dm):
-    mm_vae = exp
+    mm_vae = exp.mm_vae
     subsets = exp.subsets
 
     lr_eval = dict()
@@ -84,7 +84,7 @@ def test_clf_lr_all_subsets(epoch, clf_lr, exp, dm):
 
     d_loader = dm.test_dataloader()
 
-    # num_batches_epoch = int(dataset.__len__() / float(exp.flags.batch_size))
+    # num_batches_epoch = int(dataset.__len__() / float(exp.config.batch_size))
     for iteration, batch in enumerate(d_loader):
         batch_d = batch[0]
         batch_l = batch[1]

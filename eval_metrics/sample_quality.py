@@ -34,7 +34,7 @@ def calc_inception_features(exp, dims=2048, batch_size=128):
                         raise RuntimeError('Invalid path: %s' % dir_gen)
                     files_gen = glob.glob(os.path.join(dir_gen, mod.name, '*' +
                                                        mod.file_suffix))
-                    fn = os.path.join(exp.flags.dir_gen_eval_fid,
+                    fn = os.path.join(exp.config.dir_gen_eval_fid,
                                       key + '_' + mod.name + '_activations.npy')
                     act_gen = get_activations(files_gen, model, batch_size, dims,
                                               True, verbose=False)
@@ -50,17 +50,17 @@ def load_inception_activations(exp):
             acts[mod.name] = dict()
             for k, key in enumerate(paths.keys()):
                 if key != '':
-                    fn = os.path.join(exp.flags.dir_gen_eval_fid,
+                    fn = os.path.join(exp.config.dir_gen_eval_fid,
                                       key + '_' + mod.name + '_activations.npy')
                     feats = np.load(fn)
                     acts[mod.name][key] = feats
     return acts
 
 
-def calculate_inception_features_for_gen_evaluation(flags, paths, modality=None, dims=2048, batch_size=128):
+def calculate_inception_features_for_gen_evaluation(config, paths, modality=None, dims=2048, batch_size=128):
     block_idx = InceptionV3.BLOCK_INDEX_BY_DIM[dims]
 
-    model = InceptionV3([block_idx], path_state_dict=flags.inception_state_dict)
+    model = InceptionV3([block_idx], path_state_dict=config.dir['inception_path'])
 
     if 'random' in list(paths.keys()):
         dir_rand_gen = paths['random']
@@ -68,10 +68,10 @@ def calculate_inception_features_for_gen_evaluation(flags, paths, modality=None,
             raise RuntimeError('Invalid path: %s' % dir_rand_gen)
         if modality is not None:
             files_rand_gen = glob.glob(os.path.join(dir_rand_gen, modality, '*' + '.png'))
-            filename_random = os.path.join(flags.dir_gen_eval_fid_random, 'random_sampling_' + modality + '_activations.npy')
+            filename_random = os.path.join(config.dir_gen_eval_fid_random, 'random_sampling_' + modality + '_activations.npy')
         else:
             files_rand_gen = glob.glob(os.path.join(dir_rand_gen, '*.png'))
-            filename_random = os.path.join(flags.dir_gen_eval_fid_random, 'random_img_activations.npy')
+            filename_random = os.path.join(config.dir_gen_eval_fid_random, 'random_img_activations.npy')
         act_rand_gen = get_activations(files_rand_gen, model, batch_size, dims,
                                        True, verbose=False)
         np.save(filename_random, act_rand_gen)
@@ -96,7 +96,7 @@ def calculate_inception_features_for_gen_evaluation(flags, paths, modality=None,
             filename_conditional = os.path.join(dir_cond_gen, 'cond_gen_' + modality + '_activations.npy')
         else:
             files_cond_gen = glob.glob(os.path.join(dir_cond_gen, '*.png'))
-            filename_conditional = os.path.join(flags.dir_gen_eval_fid_cond_gen, 'conditional_img_activations.npy')
+            filename_conditional = os.path.join(config.dir_gen_eval_fid_cond_gen, 'conditional_img_activations.npy')
         act_cond_gen = get_activations(files_cond_gen, model, batch_size, dims,
                                        True, verbose=False)
         np.save(filename_conditional, act_cond_gen)
@@ -129,10 +129,10 @@ def calculate_inception_features_for_gen_evaluation(flags, paths, modality=None,
             raise RuntimeError('Invalid path: %s' % dir_real)
         if modality is not None:
             files_real = glob.glob(os.path.join(dir_real, modality, '*' + '.png'))
-            filename_real = os.path.join(flags.dir_gen_eval_fid_real, 'real_' + modality + '_activations.npy')
+            filename_real = os.path.join(config.dir_gen_eval_fid_real, 'real_' + modality + '_activations.npy')
         else:
             files_real = glob.glob(os.path.join(dir_real, '*.png'))
-            filename_real = os.path.join(flags.dir_gen_eval_fid_real, 'real_img_activations.npy')
+            filename_real = os.path.join(config.dir_gen_eval_fid_real, 'real_img_activations.npy')
         act_real = get_activations(files_real, model, batch_size, dims, True, verbose=False)
         np.save(filename_real, act_real)
 

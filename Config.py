@@ -43,15 +43,12 @@ class Config:
         self._get_mods_config(self.params)
 
     def _get_mods_config(self, config):
+        # self.method = config['method']
         mods = sorted([x for x in dir(self) if 'modality' in x])
+        # met_mods = config['method_mods']
         for m in mods:
             d = getattr(self, m)
-            if not 'private_latents' in d.keys():
-                d['private_latents'] = None
-                self.mods.append(d)
-            if config['labels']:
-                with open(config['labels'], 'rb') as handle:
-                    self.labels = pickle.load(handle)
+            self.mods.append(d)
 
     def _setup_savedir(self):
         self.mPath = os.path.join('results/', self.exp_name)
@@ -69,8 +66,8 @@ class Config:
 
     def _parse_args(self):
         args = self.parser.parse_args()
-        config = self._load_config(args.cfg)
+        config = self._load_config(args.filename)
         for name, value in vars(args).items():
             if value is not None and name != "cfg" and name in config.keys():
-                config[name] = value
+                config.name = value
         return config

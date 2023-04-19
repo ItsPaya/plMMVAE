@@ -34,24 +34,24 @@ def alpha_poe(alpha, mu, logvar, eps=1e-8):
     return pd_mu, pd_logvar
 
 
-def calc_alphaJSD_modalities_mixture(m1_mu, m1_logvar, m2_mu, m2_logvar, flags):
+def calc_alphaJSD_modalities_mixture(m1_mu, m1_logvar, m2_mu, m2_logvar, config):
     klds = torch.zeros(2)
     entropies_mixture = torch.zeros(2)
-    w_modalities = torch.Tensor(flags.alpha_modalities[1:])
+    w_modalities = torch.Tensor(config.alpha_modalities[1:])
     w_modalities = reweight_weights(w_modalities)
 
     mus = [m1_mu, m2_mu]
     logvars = [m1_logvar, m2_logvar]
     for k in range(0, len(mus)):
-        ent = calc_entropy_gauss(flags, logvars[k], norm_value=flags.batch_size)
+        ent = calc_entropy_gauss(config, logvars[k], norm_value=config.batch_size)
         # print('entropy: ' + str(ent))
         # print('lb: ' )
-        kld_lb = calc_kl_divergence_lb_gauss_mixture(flags, k, mus[k], logvars[k], mus, logvars,
-                                                     norm_value=flags.batch_size)
+        kld_lb = calc_kl_divergence_lb_gauss_mixture(config, k, mus[k], logvars[k], mus, logvars,
+                                                     norm_value=config.batch_size)
         print('kld_lb: ' + str(kld_lb))
         # print('ub: ')
-        kld_ub = calc_kl_divergence_ub_gauss_mixture(flags, k, mus[k], logvars[k], mus, logvars, ent,
-                                                     norm_value=flags.batch_size)
+        kld_ub = calc_kl_divergence_ub_gauss_mixture(config, k, mus[k], logvars[k], mus, logvars, ent,
+                                                     norm_value=config.batch_size)
         print('kld_ub: ' + str(kld_ub))
         # kld_mean = (kld_lb+kld_ub)/2;
         entropies_mixture[k] = ent.clone()
@@ -70,8 +70,7 @@ def calc_alphaJSD_modalities(device, mus, logvars, weights, normalization=None):
         klds = torch.zeros(num_mods)
     else:
         klds = torch.zeros(num_mods, num_samples)
-    # not sure if needed
-    # klds = klds.to(device)
+    klds = klds.to(device)
     for k in range(0, num_mods):
         kld = calc_kl_divergence(mus[k, :, :], logvars[k, :, :], alpha_mu,
                                  alpha_logvar, norm_value=normalization)
@@ -92,9 +91,8 @@ def calc_group_divergence_moe(device, mus, logvars, weights, normalization=None)
         klds = torch.zeros(num_mods)
     else:
         klds = torch.zeros(num_mods, num_samples)
-    # not sure if needed
-    # klds = klds.to(device)
-    # weights = weights.to(device)
+    klds = klds.to(device)
+    weights = weights.to(device)
     for k in range(0, num_mods):
         kld_ind = calc_kl_divergence(mus[k, :, :], logvars[k, :, :],
                                      norm_value=normalization)
@@ -114,7 +112,7 @@ def calc_group_divergence_poe(device, mus, logvars, norm=None):
     kld_poe = calc_kl_divergence(poe_mu, poe_logvar, norm_value=norm)
     klds = torch.zeros(num_mods)
     # evt
-    # klds = klds.to(device)
+    klds = klds.to(device)
     for k in range(0, num_mods):
         kld_ind = calc_kl_divergence(mus[k, :, :], logvars[k, :, :],
                                      norm_value=norm)
@@ -122,22 +120,21 @@ def calc_group_divergence_poe(device, mus, logvars, norm=None):
     return kld_poe, klds, [poe_mu, poe_logvar]
 
 
-def calc_modality_divergence(m1_mu, m1_logvar, m2_mu, m2_logvar, flags):
-    if flags.modality_poe:
-        kld_batch = calc_kl_divergence(m1_mu, m1_logvar, m2_mu, m2_logvar, norm_value=flags.batch_size).sum()
+def calc_modality_divergence(m1_mu, m1_logvar, m2_mu, m2_logvar, config):
+    if config.method_mods['modality_poe']:
+        kld_batch = calc_kl_divergence(m1_mu, m1_logvar, m2_mu, m2_logvar, norm_value=config.batch_size).sum()
         return kld_batch
     else:
         uniform_mu = torch.zeros(m1_mu.shape)
         uniform_logvar = torch.zeros(m1_logvar.shape)
         klds = torch.zeros(3, 3)
         klds_modonly = torch.zeros(2, 2)
-        # need all .to(flags.device)?
 
         mus = [uniform_mu, m1_mu, m2_mu]
         logvars = [uniform_logvar, m1_logvar, m2_logvar]
         for i in range(1, len(mus)):  # CAREFUL: index starts from one, not zero
             for j in range(0, len(mus)):
-                kld = calc_kl_divergence(mus[i], logvars[i], mus[j], logvars[j], norm_value=flags.batch_size)
+                kld = calc_kl_divergence(mus[i], logvars[i], mus[j], logvars[j], norm_value=config.batch_size)
                 klds[i, j] = kld
                 if i >= 1 and j >= 1:
                     klds_modonly[i - 1, j - 1] = kld

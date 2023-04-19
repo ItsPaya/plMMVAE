@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+
+#SBATCH --job-name=mmnist
+#SBATCH --output=mmnist.output_%j.txt
+#SBATCH --cpus-per-task=4
+#SBATCH --time=7:00:00
+#SBATCH --mem-per-cpu=4G
+#SBATCH -p gpu
+#SBATCH --gres=gpu:1
+
+set -eo pipefail
+shopt -s nullglob globstar
+
+# define TMPDIR, if it's empty
+if [[ -z "$TMPDIR" ]]; then
+    TMPDIR="/tmp"
+fi
+echo "TMPDIR: $TMPDIR"
+
+# activate conda env
+eval "$(conda shell.bash hook)"
+conda activate gpu_env
+echo "CONDA_PREFIX: $CONDA_PREFIX"
+
+METHOD="joint_elbo"  # NOTE: valid options are "joint_elbo", "poe", and "moe"
+LIKELIHOOD="laplace"
+DIR_DATA="$PWD/data"
+DIR_EXPERIMENT="$PWD/runs/tmp"  # NOTE: experiment logs are written here
+PATH_INC_V3="$PWD/pt_inception-2015-12-05-6726825d.pth"
+DIR_FID="$TMPDIR/MMNIST"
+
+python MasterTrainer.py \
+            --unimodal-datapaths-train "$DIR_DATA/MMNIST/train/m"{0..4} \
+            --unimodal-datapaths-test "$DIR_DATA/MMNIST/test/m"{0..4} \
+            --pretrained-classifier-paths "$PWD/trained_classifiers/trained_clfs_polyMNIST/pretrained_img_to_digit_clf_m"{0..4} \
+            --dir_experiment="$DIR_EXPERIMENT" \
+            --inception_state_dict="$PATH_INC_V3" \
+            --dir_fid="$DIR_FID" \
+            --method=$METHOD \
+            --style_dim=0 \
+            --class_dim=512 \
+            --beta=2.5 \
+            --likelihood=$LIKELIHOOD \
+            --batch_size=256 \
+            --initial_learning_rate=0.0005 \
+            --eval_freq=25 \
+            --eval_freq_fid=100 \
+            --data_multiplications=20 \
+            --num_hidden_layers=1 \
+            --end_epoch=300 \
+            --use_clf \
+            --eval_lr \
+            --calc_prd \
+            --calc_nll \

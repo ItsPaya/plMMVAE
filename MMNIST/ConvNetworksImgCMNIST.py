@@ -10,10 +10,10 @@ class EncoderImg(pl.LightningModule):
     Adopted from:
     https://www.cs.toronto.edu/~lczhang/360/lec/w05/autoencoder.html
     """
-    def __init__(self, flags):
+    def __init__(self, config):
         super(EncoderImg, self).__init__()
 
-        self.flags = flags
+        self.config = config
         self.shared_encoder = nn.Sequential(                          # input shape (3, 28, 28)
             nn.Conv2d(3, 32, kernel_size=3, stride=2, padding=1),     # -> (32, 14, 14)
             nn.ReLU(),
@@ -22,21 +22,21 @@ class EncoderImg(pl.LightningModule):
             nn.Conv2d(64, 128, kernel_size=3, stride=2, padding=1),   # -> (128, 4, 4)
             nn.ReLU(),
             Flatten(),                                                # -> (2048)
-            nn.Linear(2048, flags.style_dim + flags.class_dim),       # -> (ndim_private + ndim_shared)
+            nn.Linear(2048, config.style_dim + config.class_dim),       # -> (ndim_private + ndim_shared)
             nn.ReLU(),
         )
 
         # content branch
-        self.class_mu = nn.Linear(flags.style_dim + flags.class_dim, flags.class_dim)
-        self.class_logvar = nn.Linear(flags.style_dim + flags.class_dim, flags.class_dim)
+        self.class_mu = nn.Linear(config.style_dim + config.class_dim, config.class_dim)
+        self.class_logvar = nn.Linear(config.style_dim + config.class_dim, config.class_dim)
         # optional style branch
-        if flags.factorized_representation:
-            self.style_mu = nn.Linear(flags.style_dim + flags.class_dim, flags.style_dim)
-            self.style_logvar = nn.Linear(flags.style_dim + flags.class_dim, flags.style_dim)
+        if self.config.method_mods['factorized_representation']:
+            self.style_mu = nn.Linear(config.style_dim + config.class_dim, config.style_dim)
+            self.style_logvar = nn.Linear(config.style_dim + config.class_dim, config.style_dim)
 
     def forward(self, x):
         h = self.shared_encoder(x)
-        if self.flags.factorized_representation:
+        if self.config.method_mods['factorized_representation']:
             return self.style_mu(h), self.style_logvar(h), self.class_mu(h), \
                    self.class_logvar(h)
         else:
@@ -48,11 +48,11 @@ class DecoderImg(pl.LightningModule):
     Adopted from:
     https://www.cs.toronto.edu/~lczhang/360/lec/w05/autoencoder.html
     """
-    def __init__(self, flags):
+    def __init__(self, config):
         super(DecoderImg, self).__init__()
-        self.flags = flags
+        self.config = config
         self.decoder = nn.Sequential(
-            nn.Linear(flags.style_dim + flags.class_dim, 2048),                                # -> (2048)
+            nn.Linear(config.style_dim + config.class_dim, 2048),                                # -> (2048)
             nn.ReLU(),
             Unflatten((128, 4, 4)),                                                            # -> (128, 4, 4)
             nn.ConvTranspose2d(128, 64, kernel_size=3, stride=2, padding=1),                   # -> (64, 7, 7)
@@ -63,7 +63,7 @@ class DecoderImg(pl.LightningModule):
         )
 
     def forward(self, style_latent_space, class_latent_space):
-        if self.flags.factorized_representation:
+        if self.config.method_mods['factorized_representation']:
             z = torch.cat((style_latent_space, class_latent_space), dim=1)
         else:
             z = class_latent_space

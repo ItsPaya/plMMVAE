@@ -24,17 +24,17 @@ LOG2PI = float(np.log(2.0 * math.pi))
 
 # at the moment: only marginals and joint
 def calc_log_likelihood_batch(exp, latents, subset_key, subset, batch, num_imp_samples=10):
-    flags = exp.flags
-    model = exp
+    config = exp.config
+    model = exp.mm_vae
     mod_weights = exp.style_weights
     mods = exp.modalities
 
     s_dist = latents['subsets'][subset_key]
     n_total_samples = s_dist[0].shape[0] * num_imp_samples
 
-    if flags.factorized_representation:
+    if config.method_mods['factorized_representation']:
         enc_mods = latents['modalities']
-        style = model.get_random_style_dists(flags.batch_size)
+        style = model.get_random_style_dists(config.batch_size)
         for m, mod in enumerate(subset):
             if (enc_mods[mod.name + '_style'][0] is not None
                     and enc_mods[mod.name + '_style'][1] is not None):
@@ -55,7 +55,7 @@ def calc_log_likelihood_batch(exp, latents, subset_key, subset, batch, num_imp_s
     l_lin_rep = {'content': c,
                  'style': dict()}
     for m, m_key in enumerate(l_style_rep.keys()):
-        if flags.factorized_representation:
+        if config.method_mods['factorized_representation']:
             s = {'mu': l_style_rep[mod.name]['mu'].view(n_total_samples, -1),
                  'logvar': l_style_rep[mod.name]['logvar'].view(n_total_samples, -1),
                  'z': l_style_rep[mod.name]['z'].view(n_total_samples, -1)}
@@ -66,7 +66,7 @@ def calc_log_likelihood_batch(exp, latents, subset_key, subset, batch, num_imp_s
     l_dec = {'content': l_lin_rep['content']['z'],
              'style': dict()}
     for m, m_key in enumerate(l_style_rep.keys()):
-        if flags.factorized_representation:
+        if config.method_mods['factorized_representation']:
             l_dec['style'][m_key] = l_lin_rep['style'][m_key]['z']
         else:
             l_dec['style'][m_key] = None
@@ -83,7 +83,7 @@ def calc_log_likelihood_batch(exp, latents, subset_key, subset, batch, num_imp_s
             style_mod = l_lin_rep_style[mod.name]
         else:
             style_mod = None
-        ll_mod = log_marginal_estimate(flags,
+        ll_mod = log_marginal_estimate(config,
                                        num_imp_samples,
                                        gen[mod.name],
                                        batch[mod.name],
@@ -91,7 +91,7 @@ def calc_log_likelihood_batch(exp, latents, subset_key, subset, batch, num_imp_s
                                        l_lin_rep_content)
         ll[mod.name] = ll_mod
 
-    ll_joint = log_joint_estimate(flags, num_imp_samples, gen, batch,
+    ll_joint = log_joint_estimate(config, num_imp_samples, gen, batch,
                                   l_lin_rep_style,
                                   l_lin_rep_content)
     ll['joint'] = ll_joint
@@ -99,11 +99,11 @@ def calc_log_likelihood_batch(exp, latents, subset_key, subset, batch, num_imp_s
 
 
 def estimate_likelihoods(exp, dm):
-    model = exp
+    model = exp.mm_vae
     mods = exp.modalities
-    bs_normal = exp.flags.batch_size
-    exp.flags.batch_size = 64
-    d_loader = DataLoader(dm.dataset_test, batch_size=exp.flags.batch_size,
+    bs_normal = exp.config.batch_size
+    exp.config.batch_size = 64
+    d_loader = DataLoader(dm.dataset_test, batch_size=exp.config.batch_size,
                           shuffle=True, num_workers=4, drop_last=True)
 
     subsets = exp.subsets
@@ -134,5 +134,5 @@ def estimate_likelihoods(exp, dm):
         for l, m_key in enumerate(lh_subset.keys()):
             mean_val = np.mean(np.array(lh_subset[m_key]))
             lhoods[s_key][m_key] = mean_val
-    exp.flags.batch_size = bs_normal
+    exp.config.batch_size = bs_normal
     return lhoods
