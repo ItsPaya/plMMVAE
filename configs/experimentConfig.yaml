@@ -9,7 +9,7 @@ class_dim: 20
 font_file: 'FreeSerif.ttf'
 labels:
 
-method: 'poe' # choose method for training the model
+method: 'joint_elbos' # choose method for training the model (joint_elbo, poe, moe)
 method_mods:
   modality_jsd: False
   modality_poe: False
@@ -22,16 +22,31 @@ method_mods:
 
 dir:
   # both
-  data_path: '../data'
-  clf_path: '../clf'
+  data_path: './data/'
+  clf_path: './trained_classifiers-20230327T173300Z-001/trained_classifiers/trained_clfs_mst'
   fid_path: None #MMNIST ../MMNIST
-  inception_path: '../inception_state_dict.pth'
+  inception_path: './pt_inception-2015-12-05-6726825d.pth'
   # MMNIST
-  pretrained_clf_paths: '../trained_classifiers/trained_clfs_polyMNIST/pretrained_img_to_digit_clf_m'{0..4}
+  pretrained_clf_paths:
+    - './trained_classifiers-20230327T173300Z-001/trained_classifiers/trained_clfs_polyMNIST/pretrained_img_to_digit_clf_m0'
+    - './trained_classifiers-20230327T173300Z-001/trained_classifiers/trained_clfs_polyMNIST/pretrained_img_to_digit_clf_m1'
+    - './trained_classifiers-20230327T173300Z-001/trained_classifiers/trained_clfs_polyMNIST/pretrained_img_to_digit_clf_m2'
+    - './trained_classifiers-20230327T173300Z-001/trained_classifiers/trained_clfs_polyMNIST/pretrained_img_to_digit_clf_m3'
+    - './trained_classifiers-20230327T173300Z-001/trained_classifiers/trained_clfs_polyMNIST/pretrained_img_to_digit_clf_m4'
 # MMNIST
-unimodal_datapath:
-  train: '../data/MMNIST/train/m'{0..4}
-  test: '../data/MMNIST/test/m'{0..4}
+unimodal_datapaths:
+  train:
+    - './data/MMNIST/train/m0/'
+    - './data/MMNIST/train/m1/'
+    - './data/MMNIST/train/m2/'
+    - './data/MMNIST/train/m3/'
+    - './data/MMNIST/train/m4/'
+  test:
+    - './data/MMNIST/test/m0/'
+    - './data/MMNIST/test/m1/'
+    - './data/MMNIST/test/m2/'
+    - './data/MMNIST/test/m3/'
+    - './data/MMNIST/test/m4/'
 
 # change modalities here for mst(m1: mnist, m2: svhn, m3:text) o/w need to adjust code
 modality_1:
@@ -51,10 +66,10 @@ modality_3:
   likelihood: 'categorical'
 
 # exp_params:
-LR: 0.005 #0.0005 in job_polyMnist
+LR: 0.001 #0.0005 in job_polyMnist
 manual_seed: 1265
 beta_values:
-  beta: 0.5 #MMNIST and mst 2.5
+  beta: 2.5 #MMNIST and mst 2.5
   beta_1: 0.9
   beta_2: 0.999
   beta_style: 1.0
@@ -70,14 +85,14 @@ div_weight:
   div_weight_m2_content: 0.25
   div_weight_m3_content: 0.25
   # both
-  div_weight_uniform_content: 0.25 # MMNIST None, then use 1/num_mods+1
+  div_weight_uniform_content: 0 # MMNIST None, then use 1/num_mods+1
 evaluation:
-  use_clf: False # should generate samples be classified (default=False)
-  calc_nll: False # calculation of nll (default=False)
-  eval_lr: False # can probably be done by lightning trainer (default=False)
-  calc_prd: False # calculation of prec-rec for gen model (default=False)
-  eval_freq: 10 # freq of eval of latent representation of generative performance (in # of epochs) | (default=10)
-  eval_freq_fid: 10 # freq of eval of latent representation of generative performance (in # epochs) | (default=10)
+  use_clf: True # should generate samples be classified (default=False)
+  calc_nll: True # calculation of nll (default=False)
+  eval_lr: True # can probably be done by lightning trainer (default=False)
+  calc_prd: True # calculation of prec-rec for gen model (default=False)
+  eval_freq: 25 # freq of eval of latent representation of generative performance (in # of epochs) | (default=10)
+  eval_freq_fid: 100 # freq of eval of latent representation of generative performance (in # epochs) | (default=10)
   num_samples_fid: 10000 # numer of samples the calculation of fid is based on (default=10000)
   num_train_samples_lr: 500 # number of training samples to train the lr clf (default=500)
   save_figure: False # (default=False)
@@ -122,8 +137,8 @@ clf_save_m3: 'clf_m3'
 trainer_params:
   device: 'auto'
   accelerator: 'auto'
-  max_epochs: 100
+  max_epochs: 2
 
 logging_params:
   save_dir: "logs/"
-  name: "svhn_mnist_text"
+  name: "polyMNIST"

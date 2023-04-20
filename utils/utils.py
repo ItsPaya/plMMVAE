@@ -61,12 +61,12 @@ def reweight_weights(w):
     return w
 
 
-def mixture_component_selection(flags, mus, logvars, w_modalities=None):
+def mixture_component_selection(config, mus, logvars, w_modalities=None):
     # if not defined, take pre-defined weights
     num_components = mus.shape[0]
     num_samples = mus.shape[1]
     if w_modalities is None:
-        w_modalities = torch.Tensor(flags.alpha_modalities) # evt .to(device) needed
+        w_modalities = torch.Tensor(config.alpha_modalities) # evt .to(device) needed
     idx_start = []
     idx_end = []
     for k in range(0, num_components):
@@ -87,7 +87,7 @@ def mixture_component_selection(flags, mus, logvars, w_modalities=None):
 
 
 def calc_elbo(exp, modality, recs, klds):
-    flags = exp.flags
+    config = exp.config
     mods = exp.modalities
     s_weights = exp.style_weights
     r_weights = exp.rec_weights
@@ -107,21 +107,21 @@ def calc_elbo(exp, modality, recs, klds):
         rec_weight_mod = 1.0
         kld_style = beta_style_mod * klds['style'][modality]
         rec_error = rec_weight_mod * recs[modality]
-    div = flags.beta_content * kld_content + flags.beta_style * kld_style
-    elbo = rec_error + flags.beta * div
+    div = config.beta_values['beta_content'] * kld_content + config.beta_values['beta_style'] * kld_style
+    elbo = rec_error + config.beta_values['beta'] * div
     return elbo
 
 
-def save_and_log_flags(flags):
+def save_and_log_flags(config):
     # filename_flags = os.path.join(flags.dir_experiment_run, 'flags.json')
     # with open(filename_flags, 'w') as f:
     #    json.dump(flags.__dict__, f, indent=2, sort_keys=True)
 
-    filename_flags_rar = os.path.join(flags.dir_experiment_run, 'flags.rar')
-    torch.save(flags, filename_flags_rar)
+    filename_flags_rar = os.path.join(config.dir_experiment_run, 'flags.rar')
+    torch.save(config, filename_flags_rar)
     str_args = ''
-    for k, key in enumerate(sorted(flags.__dict__.keys())):
-        str_args = str_args + '\n' + key + ': ' + str(flags.__dict__[key])
+    for k, key in enumerate(sorted(config.__dict__.keys())):
+        str_args = str_args + '\n' + key + ': ' + str(config.__dict__[key])
     return str_args
 
 

@@ -42,7 +42,7 @@ class Config:
             setattr(self, p, self.params[p])
         self._get_mods_config(self.params)
 
-    def _get_mods_config(self, config):
+    def _get_mods_config(self, params):
         # self.method = config['method']
         mods = sorted([x for x in dir(self) if 'modality' in x])
         # met_mods = config['method_mods']

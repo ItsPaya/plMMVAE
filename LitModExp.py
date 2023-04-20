@@ -48,9 +48,9 @@ class MultiModVAE(pl.LightningModule, ABC):
         self.alphabet = alphabet
         self.config.num_features = len(alphabet)
 
+        self.num_modalities = self.config.num_mods
         self.modalities = self.set_modalities()  # get from config
         self.subsets = self.set_subsets()
-        self.num_modalities = len(self.modalities.keys())
 
         self.mm_vae = self.get_model()  # get from config
         self.clfs = self.set_clfs()  # get from config
@@ -70,7 +70,7 @@ class MultiModVAE(pl.LightningModule, ABC):
             model = VAEMMNIST(self.config, self.modalities, self.subsets)
         else:
             model = VAEtrimodalSVHNMNIST(self.config, self.modalities, self.subsets)
-        model = model.to(self)
+        model = model.to(self.device)
         return model
 
     def training_step(self, batch, batch_idx):
@@ -159,7 +159,7 @@ class MultiModVAE(pl.LightningModule, ABC):
                                                  fig, epoch, dataformats='HWC')
 
         if (epoch + 1) % self.config.evaluation['eval_freq'] == 0 or\
-                (epoch + 1) == self.config.trainer_params['max_epoch']:
+                (epoch + 1) == self.config.trainer_params['max_epochs']:
             if self.config.evaluation['eval_lr']:
                 clf_lr = train_clf_lr_all_subsets(self, self.trainer.datamodule)
                 lr_eval = test_clf_lr_all_subsets(epoch, clf_lr, self, self.trainer.datamodule)
@@ -200,7 +200,7 @@ class MultiModVAE(pl.LightningModule, ABC):
         for k, m_key in enumerate(batch_d.keys()):
             batch_d[m_key] = Variable(batch_d[m_key]).to(self.device)
 
-        results = self(batch_d)
+        results = self.mm_vae(batch_d)
 
         log_probs, weighted_log_prob = self.calc_log_probs(results, batch)
         group_divergence = results['joint_divergence']
@@ -231,7 +231,7 @@ class MultiModVAE(pl.LightningModule, ABC):
                 klds_joint['style'][m_key] = kld_style_m
                 if self.config.method_mods['poe_unimodal_elbos']:
                     i_batch_mod = {m_key: batch_d[m_key]}
-                    r_mod = self(i_batch_mod)
+                    r_mod = self.mm_vae(i_batch_mod)
                     log_prob_mod = -mod.calc_log_prob(r_mod['rec'][m_key],
                                                       batch_d[m_key],
                                                       self.config.batch_size)
@@ -254,10 +254,10 @@ class MultiModVAE(pl.LightningModule, ABC):
 
     def configure_optimizers(self):
         optimizer = optim.Adam(
-            list(self.model.parameters()),
+            list(self.mm_vae.parameters()),
             lr=self.config.LR,
             betas=(self.config.beta_values['beta_1'],
-                   self.config.beta_values['beta_2)']))
+                   self.config.beta_values['beta_2']))
         return optimizer
 
     def set_rec_weights(self):
@@ -304,7 +304,7 @@ class MultiModVAE(pl.LightningModule, ABC):
                     sample, target = dataset_test.__getitem__(random.randint(0, n_test))
                 if target == i:
                     for k, key in enumerate(sample):
-                        sample[key] = sample[key].to(self)
+                        sample[key] = sample[key].to(self.device)
                     samples.append(sample)
                     break
         return samples
@@ -328,18 +328,18 @@ class MultiModVAE(pl.LightningModule, ABC):
             model_clf_m3 = None
             if self.config.evaluation['use_clf']:
                 model_clf_m1 = ClfImgMNIST()
-                model_clf_m1.load_state_dict(torch.load(os.path.join(self.config.dir['dir_clf'],
-                                                                     self.config.clf_save_m1)))
+                model_clf_m1.load_state_dict(torch.load(os.path.join(self.config.dir['clf_path'],
+                                                                     self.config.clf_save_m1), map_location=torch.device('cpu')))
                 # model_clf_m1 = model_clf_m1.to(self.device)
 
                 model_clf_m2 = ClfImgSVHN()
-                model_clf_m2.load_state_dict(torch.load(os.path.join(self.config.dir['dir_clf'],
-                                                                     self.config.clf_save_m2)))
+                model_clf_m2.load_state_dict(torch.load(os.path.join(self.config.dir['clf_path'],
+                                                                     self.config.clf_save_m2), map_location=torch.device('cpu')))
                 # model_clf_m2 = model_clf_m2.to(self.device)
 
                 model_clf_m3 = ClfText(self.config)
-                model_clf_m3.load_state_dict(torch.load(os.path.join(self.config.dir['dir_clf'],
-                                                                     self.config.clf_save_m3)))
+                model_clf_m3.load_state_dict(torch.load(os.path.join(self.config.dir['clf_path'],
+                                                                     self.config.clf_save_m3), map_location=torch.device('cpu')))
                 # model_clf_m3 = model_clf_m3.to(self.device)
 
             clfs = {'mnist': model_clf_m1,
@@ -347,11 +347,11 @@ class MultiModVAE(pl.LightningModule, ABC):
                     'text': model_clf_m3}
         elif self.config.dataset == 'MMNIST':
             clfs = {"m%d" % m: None for m in range(self.num_modalities)}
-            if self.config.use_clf:
+            if self.config.evaluation['use_clf']:
                 for m, fp in enumerate(self.config.dir['pretrained_clf_paths']):
                     model_clf = ClfImgCMNIST()
-                    model_clf.load_state_dict(torch.load(fp))
-                    model_clf.to(self)
+                    model_clf.load_state_dict(torch.load(fp, map_location=torch.device('cpu')))
+                    model_clf.to(self.device)
                     clfs["m%d" % m] = model_clf
                 for m, clf in clfs.items():
                     if clf is None:
@@ -402,6 +402,45 @@ class MultiModVAE(pl.LightningModule, ABC):
             subsets[key] = mods
             subsets.pop('', None)
         return subsets
+
+    def calc_log_probs(self, result, batch):
+        mods = self.modalities
+        log_probs = dict()
+        weighted_log_prob = 0.0
+        for m, m_key in enumerate(mods.keys()):
+            mod = mods[m_key]
+            log_probs[mod.name] = -mod.calc_log_prob(result['rec'][mod.name],
+                                                     batch[0][mod.name],
+                                                     self.config.batch_size)
+            weighted_log_prob += self.rec_weights[mod.name] * log_probs[mod.name]
+        return log_probs, weighted_log_prob
+
+    def calc_klds(self, result):
+        latents = result['latents']['subsets']
+        klds = dict()
+        for m, key in enumerate(latents.keys()):
+            mu, logvar = latents[key]
+            klds[key] = calc_kl_divergence(mu, logvar,
+                                           norm_value=self.config.batch_size)
+        return klds
+
+    def calc_klds_style(self, result):
+        latents = result['latents']['modalities']
+        klds = dict()
+        for m, key in enumerate(latents.keys()):
+            if key.endswith('style'):
+                mu, logvar = latents[key]
+                klds[key] = calc_kl_divergence(mu, logvar,
+                                               norm_value=self.config.batch_size)
+        return klds
+
+    def calc_style_kld(self, klds):
+        mods = self.modalities
+        style_weights = self.style_weights
+        weighted_klds = 0.0
+        for m, m_key in enumerate(mods.keys()):
+            weighted_klds += style_weights[m_key] * klds[m_key + '_style']
+        return weighted_klds
 
     def set_paths_fid(self):
         dir_real = os.path.join(self.config.dir_gen_eval_fid, 'real')

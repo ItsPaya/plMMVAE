@@ -45,22 +45,21 @@ class BaseMMVae(ABC, pl.LightningModule):
 
     def set_fusion_functions(self):
         weights = reweight_weights(torch.Tensor(self.config.alpha_modalities))
-        weights = weights
-        # not sure if needed since originaly: self.weights = weights.to(self.flags.device)
+        self.weights = weights.to(self.device)
 
-        if self.flags.modality_moe:
+        if self.config.method_mods['modality_moe']:
             self.modalitiy_fusion = self.moe_fusion
             self.fusion_condition = self.fusion_condition_moe
             self.calc_joint_divergence = self.divergence_static_prior
-        elif self.flags.modality_jsd:
+        elif self.config.method_mods['modality_jsd']:
             self.modalitiy_fusion = self.moe_fusion
             self.fusion_condition = self.fusion_condition_moe
             self.calc_joint_divergence = self.divergence_dynamic_prior
-        elif self.flags.modality_poe:
+        elif self.config.method_mods['modality_poe']:
             self.modalitiy_fusion = self.poe_fusion
             self.fusion_condition = self.fusion_condition_poe
             self.calc_joint_divergence = self.divergence_static_prior
-        elif self.flags.joint_elbo:
+        elif self.config.method_mods['joint_elbo']:
             self.modalitiy_fusion = self.poe_fusion
             self.fusion_condition = self.fusion_condition_joint
             self.calc_joint_divergence = self.divergence_static_prior
@@ -75,7 +74,7 @@ class BaseMMVae(ABC, pl.LightningModule):
                                                  mus,
                                                  logvars,
                                                  weights,
-                                                 normalization=self.flags.batch_size)
+                                                 normalization=self.config.batch_size)
         divs = dict()
         divs['joint_divergence'] = div_measures[0]
         divs['individual_divs'] = div_measures[1]
@@ -91,7 +90,7 @@ class BaseMMVae(ABC, pl.LightningModule):
                                                 mus,
                                                 logvars,
                                                 weigths,
-                                                normalization=self.flags.batch_size)
+                                                normalization=self.config.batch_size)
         divs = dict()
         divs['joint_divergence'] = div_measures[0]
         divs['individual_divs'] = div_measures[1]
@@ -104,7 +103,7 @@ class BaseMMVae(ABC, pl.LightningModule):
             weights = self.weights
 
         weights = reweight_weights(weights)
-        mu_moe, logvar_moe = mixture_component_selection(self.flags,
+        mu_moe, logvar_moe = mixture_component_selection(self.config,
                                                                mus,
                                                                logvars,
                                                                weights)
@@ -113,13 +112,13 @@ class BaseMMVae(ABC, pl.LightningModule):
 
     def poe_fusion(self, mus, logvars, weights=None):
         # not sure if needed since .to and device calls get deleted
-        if self.flags.modality_poe or mus.shape[0] == len(self.modalities.keys()):
+        if self.config.method_mods['modality_poe'] or mus.shape[0] == len(self.modalities.keys()):
             num_samples = mus[0].shape[0]
             mus = torch.cat((mus, torch.zeros(1, num_samples,
-                                              self.flags.class_dim).to(self.device)),
+                                              self.config.class_dim).to(self.device)),
                             dim=0)
             logvars = torch.cat((logvars, torch.zeros(1, num_samples,
-                                                      self.flags.class_dim).to(self.device)),
+                                                      self.config.class_dim).to(self.device)),
                                 dim=0)
         # mus = torch.cat(mus, dim=0);
         # logvars = torch.cat(logvars, dim=0);
@@ -160,7 +159,7 @@ class BaseMMVae(ABC, pl.LightningModule):
         for m, m_key in enumerate(self.modalities.keys()):
             if m_key in input_batch.keys():
                 m_s_mu, m_s_logvar = enc_mods[m_key + '_style']
-                if self.flags.factorized_representation:
+                if self.config.method_mods['factorized_representation']:
                     m_s_embeddings = self.reparameterize(mu=m_s_mu, logvar=m_s_logvar)
                 else:
                     m_s_embeddings = None
@@ -186,7 +185,7 @@ class BaseMMVae(ABC, pl.LightningModule):
 
     def inference(self, input_batch, num_samples=None):
         if num_samples is None:
-            num_samples = self.flags.batch_size
+            num_samples = self.config.batch_size
         latents = dict()
         enc_mods = self.encode(input_batch)
         latents['modalities'] = enc_mods
@@ -217,11 +216,11 @@ class BaseMMVae(ABC, pl.LightningModule):
                     if self.fusion_condition(mods, input_batch):
                         mus = torch.cat((mus, s_mu.unsqueeze(0)), dim=0)
                         logvars = torch.cat((logvars, s_logvar.unsqueeze(0)), dim=0)
-        if self.flags.modality_jsd:
+        if self.config.method_mods['modality_jsd']:
             mus = torch.cat((mus, torch.zeros(1, num_samples,
-                                              self.flags.class_dim).to(self.device)), dim=0)
+                                              self.config.class_dim).to(self.device)), dim=0)
             logvars = torch.cat((logvars, torch.zeros(1, num_samples,
-                                                      self.flags.class_dim).to(self.device)), dim=0)
+                                                      self.config.class_dim).to(self.device)), dim=0)
         weights = (1 / float(mus.shape[0])) * torch.ones(mus.shape[0]).to(self.device)
         joint_mu, joint_logvar = self.moe_fusion(mus, logvars, weights)
         latents['mus'] = mus
@@ -234,10 +233,10 @@ class BaseMMVae(ABC, pl.LightningModule):
 
     def generate(self, num_samples=None):
         if num_samples is None:
-            num_samples = self.flags.batch_size
+            num_samples = self.config.batch_size
         # need to handle this device calls
-        mu = torch.zeros(num_samples, self.flags.class_dim).to(self.device)
-        logvar = torch.zeros(num_samples, self.flags.class_dim).to(self.device)
+        mu = torch.zeros(num_samples, self.config.class_dim).to(self.device)
+        logvar = torch.zeros(num_samples, self.config.class_dim).to(self.device)
         z_class = self.reparameterize(mu, logvar)
         z_styles = self.get_random_styles(num_samples)
         random_latents = {'content': z_class, 'style': z_styles}
@@ -264,7 +263,7 @@ class BaseMMVae(ABC, pl.LightningModule):
 
     def cond_generation(self, latent_distributions, num_samples=None):
         if num_samples is None:
-            num_samples = self.flags.batch_size
+            num_samples = self.config.batch_size
 
         style_latents = self.get_random_styles(num_samples)
         cond_gen_samples = dict()
@@ -287,7 +286,7 @@ class BaseMMVae(ABC, pl.LightningModule):
     def get_random_styles(self, num_samples):
         styles = dict()
         for k, m_key in enumerate(self.modalities.keys()):
-            if self.flags.factorized_representation:
+            if self.config.method_mods['factorized_representation']:
                 mod = self.modalities[m_key]
                 z_style = torch.randn(num_samples, mod.style_dim)
             else:

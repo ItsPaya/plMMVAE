@@ -2,26 +2,26 @@ import torch
 import torch.nn as nn
 
 class EncoderSVHN(nn.Module):
-    def __init__(self, flags):
+    def __init__(self, config):
         super(EncoderSVHN, self).__init__()
-        self.flags = flags
+        self.config = config
         self.conv1 = nn.Conv2d(3, 32, kernel_size=4, stride=2, padding=1, dilation=1)
         self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2, padding=1, dilation=1)
         self.conv3 = nn.Conv2d(64, 64, kernel_size=4, stride=2, padding=1, dilation=1)
         self.conv4 = nn.Conv2d(64, 128, kernel_size=4, stride=2, padding=0, dilation=1)
         self.relu = nn.ReLU()
 
-        if flags.factorized_representation:
+        if config.method_mods['factorized_representation']:
             # style
-            self.style_mu = nn.Linear(in_features=128, out_features=flags.style_svhn_dim, bias=True)
-            self.style_logvar = nn.Linear(in_features=128, out_features=flags.style_svhn_dim, bias=True)
+            self.style_mu = nn.Linear(in_features=128, out_features=config.style_svhn_dim, bias=True)
+            self.style_logvar = nn.Linear(in_features=128, out_features=config.style_svhn_dim, bias=True)
             # class
-            self.class_mu = nn.Linear(in_features=128, out_features=flags.class_dim, bias=True)
-            self.class_logvar = nn.Linear(in_features=128, out_features=flags.class_dim, bias=True)
+            self.class_mu = nn.Linear(in_features=128, out_features=config.class_dim, bias=True)
+            self.class_logvar = nn.Linear(in_features=128, out_features=config.class_dim, bias=True)
         else:
             #non-factorized
-            self.hidden_mu = nn.Linear(in_features=128, out_features=flags.class_dim, bias=True)
-            self.hidden_logvar = nn.Linear(in_features=128, out_features=flags.class_dim, bias=True)
+            self.hidden_mu = nn.Linear(in_features=128, out_features=config.class_dim, bias=True)
+            self.hidden_logvar = nn.Linear(in_features=128, out_features=config.class_dim, bias=True)
 
     def forward(self, x):
         h = self.conv1(x)
@@ -33,7 +33,7 @@ class EncoderSVHN(nn.Module):
         h = self.conv4(h)
         h = self.relu(h)
         h = h.view(h.size(0), -1)
-        if self.flags.factorized_representation:
+        if self.config.method_mods['factorized_representation']:
             style_latent_space_mu = self.style_mu(h)
             style_latent_space_logvar = self.style_logvar(h)
             class_latent_space_mu = self.class_mu(h)
@@ -52,13 +52,13 @@ class EncoderSVHN(nn.Module):
 
 
 class DecoderSVHN(nn.Module):
-    def __init__(self, flags):
+    def __init__(self, config):
         super(DecoderSVHN, self).__init__()
-        self.flags = flags
-        if flags.factorized_representation:
-            self.linear_factorized = nn.Linear(flags.style_svhn_dim+flags.class_dim, 128)
+        self.config = config
+        if config.method_mods['factorized_representation']:
+            self.linear_factorized = nn.Linear(config.style_svhn_dim+config.class_dim, 128)
         else:
-            self.linear = nn.Linear(flags.class_dim, 128)
+            self.linear = nn.Linear(config.class_dim, 128)
         self.conv1 = nn.ConvTranspose2d(128, 64, kernel_size=4, stride=1, padding=0, dilation=1)
         self.conv2 = nn.ConvTranspose2d(64, 64, kernel_size=4, stride=2, padding=1, dilation=1)
         self.conv3 = nn.ConvTranspose2d(64, 32, kernel_size=4, stride=2, padding=1, dilation=1)
@@ -66,7 +66,7 @@ class DecoderSVHN(nn.Module):
         self.relu = nn.ReLU()
 
     def forward(self, style_latent_space, class_latent_space):
-        if self.flags.factorized_representation:
+        if self.config.method_mods['factorized_representation']:
             z = torch.cat((style_latent_space, class_latent_space), dim=1)
             z = self.linear_factorized(z)
         else:

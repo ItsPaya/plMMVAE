@@ -39,8 +39,8 @@ def save_generated_samples_singlegroup(exp, batch_id, group_name, samples):
         if not os.path.exists(dir_f):
             os.makedirs(dir_f)
 
-    cnt_samples = batch_id * exp.flags.batch_size
-    for k in range(0, exp.flags.batch_size):
+    cnt_samples = batch_id * exp.config.batch_size
+    for k in range(0, exp.config.batch_size):
         for i, key in enumerate(samples.keys()):
             mod = exp.modalities[key]
             fn_out = os.path.join(dir_save, key, str(cnt_samples).zfill(6) +

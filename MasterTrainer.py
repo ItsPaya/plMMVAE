@@ -64,7 +64,7 @@ if __name__ == '__main__':
     print(config.method_mods['joint_elbo'])
 
     if config.dataset == 'MMNIST':
-        assert len(config.unimodal_datapath['train']) == len(config.unimodal_datapath['test'])
+        assert len(config.unimodal_datapaths['train']) == len(config.unimodal_datapaths['test'])
         config.num_mods = len(config.unimodal_datapaths['train'])
         if config.div_weight['div_weight_uniform_content'] is None:
             config.div_weight['div_weight_uniform_content'] = 1 / (config.num_mods + 1)
@@ -87,8 +87,10 @@ if __name__ == '__main__':
 
     plot_img_size = torch.Size((3, 28, 28))
     font = ImageFont.truetype(font=config.font_file, size=38)
+    print(config.dir['pretrained_clf_paths'])
+    print(config.num_mods)
 
-    if config.dataset == 'mmnist':
+    if config.dataset == 'MMNIST':
         dm = MMNISTDataModule(config, alphabet)
     else:
         dm = SVHNMNISTDataModuleC(config, alphabet)
@@ -99,13 +101,15 @@ if __name__ == '__main__':
 
     # For reproducibility
     seed_everything(config.manual_seed, True)
+    print(config.unimodal_datapaths['train'])
 
-    # trainer = pl.Trainer(devices='auto', accelerator='auto', max_epochs=2,
-    #                      fast_dev_run=True, logger=tb_logger,
-    #                      callbacks=[TQDMProgressBar(refresh_rate=20)])
+    trainer = pl.Trainer(devices='auto', accelerator='auto',
+                         max_epochs=config.trainer_params['max_epochs'],
+                         fast_dev_run=False, logger=tb_logger,
+                         callbacks=[TQDMProgressBar(refresh_rate=20)])
 
-    # trainer.fit(mm_vae, datamodule=dm)
+    trainer.fit(mm_vae, datamodule=dm)
     # trainer.validate(mm_vae, dm)
-    # results = trainer.test(mm_vae, dm)
+    results = trainer.test(mm_vae, dm)
 
-    # print(results)
+    print(results)

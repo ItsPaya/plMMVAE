@@ -24,25 +24,25 @@ class FeatureEncText(nn.Module):
 
 
 class EncoderText(nn.Module):
-    def __init__(self, flags):
+    def __init__(self, config):
         super(EncoderText, self).__init__()
-        self.flags = flags
-        self.text_feature_enc = FeatureEncText(flags.dim, flags.num_features)
-        if flags.factorized_representation:
+        self.config = config
+        self.text_feature_enc = FeatureEncText(config.dim, config.num_features)
+        if config.method_mods['factorized_representation']:
             # style
-            self.style_mu = nn.Linear(in_features=2*flags.dim, out_features=flags.style_text_dim, bias=True)
-            self.style_logvar = nn.Linear(in_features=2*flags.dim, out_features=flags.style_text_dim, bias=True)
+            self.style_mu = nn.Linear(in_features=2*config.dim, out_features=config.style_text_dim, bias=True)
+            self.style_logvar = nn.Linear(in_features=2*config.dim, out_features=config.style_text_dim, bias=True)
             # class
-            self.class_mu = nn.Linear(in_features=2*flags.dim, out_features=flags.class_dim, bias=True)
-            self.class_logvar = nn.Linear(in_features=2*flags.dim, out_features=flags.class_dim, bias=True)
+            self.class_mu = nn.Linear(in_features=2*config.dim, out_features=config.class_dim, bias=True)
+            self.class_logvar = nn.Linear(in_features=2*config.dim, out_features=config.class_dim, bias=True)
         else:
             #non-factorized
-            self.latent_mu = nn.Linear(in_features=2*flags.dim, out_features=flags.class_dim, bias=True)
-            self.latent_logvar = nn.Linear(in_features=2*flags.dim, out_features=flags.class_dim, bias=True)
+            self.latent_mu = nn.Linear(in_features=2*config.dim, out_features=config.class_dim, bias=True)
+            self.latent_logvar = nn.Linear(in_features=2*config.dim, out_features=config.class_dim, bias=True)
 
     def forward(self, x):
         h = self.text_feature_enc(x)
-        if self.flags.factorized_representation:
+        if self.config.method_mods['factorized_representation']:
             style_latent_space_mu = self.style_mu(h)
             style_latent_space_logvar = self.style_logvar(h)
             class_latent_space_mu = self.class_mu(h)
@@ -55,24 +55,24 @@ class EncoderText(nn.Module):
 
 
 class DecoderText(nn.Module):
-    def __init__(self, flags):
+    def __init__(self, config):
         super(DecoderText, self).__init__()
-        self.flags = flags
-        if flags.factorized_representation:
-            self.linear_factorized = nn.Linear(flags.style_text_dim+flags.class_dim,
-                                               2*flags.dim)
+        self.config = config
+        if config.method_mods['factorized_representation']:
+            self.linear_factorized = nn.Linear(config.style_text_dim+config.class_dim,
+                                               2*config.dim)
         else:
-            self.linear = nn.Linear(flags.class_dim, 2*flags.dim)
-        self.conv1 = nn.ConvTranspose1d(2*flags.dim, 2*flags.dim,
+            self.linear = nn.Linear(config.class_dim, 2*config.dim)
+        self.conv1 = nn.ConvTranspose1d(2*config.dim, 2*config.dim,
                                         kernel_size=4, stride=1, padding=0, dilation=1)
-        self.conv2 = nn.ConvTranspose1d(2*flags.dim, 2*flags.dim,
+        self.conv2 = nn.ConvTranspose1d(2*config.dim, 2*config.dim,
                                         kernel_size=4, stride=2, padding=1, dilation=1)
-        self.conv_last = nn.Conv1d(2*flags.dim, flags.num_features, kernel_size=1)
+        self.conv_last = nn.Conv1d(2*config.dim, config.num_features, kernel_size=1)
         self.relu = nn.ReLU()
         self.out_act = nn.LogSoftmax(dim=-2)
 
     def forward(self, style_latent_space, class_latent_space):
-        if self.flags.factorized_representation:
+        if self.config.method_mods['factorized_representation']:
             z = torch.cat((style_latent_space, class_latent_space), dim=1)
             z = self.linear_factorized(z)
         else:

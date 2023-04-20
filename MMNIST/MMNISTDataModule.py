@@ -16,15 +16,16 @@ class MMNISTDataModule(pl.LightningDataModule):
         self.dataset_val = None
         self.batch_size = config.batch_size
         self.num_workers = config.num_workers
-        self.drop_last = config.dropl_last
+        self.drop_last = config.drop_last
 
     def setup(self, stage=None):
+        print(len(self.config.unimodal_datapaths['train']))
         transform = transforms.Compose([transforms.ToTensor()])
-        mmnist = MMNISTDataset(self.config.unimodal_datapath['train'], transform=transform)
+        mmnist = MMNISTDataset(self.config.unimodal_datapaths['train'], transform=transform)
         train_split = int(.8 * len(mmnist))
         val_split = len(mmnist) - train_split
         self.dataset_train, self.dataset_val = random_split(mmnist, [train_split, val_split])
-        self.dataset_test = MMNISTDataset(self.config.unimodal_datapath['test'], transform=transform)
+        self.dataset_test = MMNISTDataset(self.config.unimodal_datapaths['test'], transform=transform)
 
     def train_dataloader(self):
         return DataLoader(self.dataset_train, batch_size=self.batch_size, shuffle=True,

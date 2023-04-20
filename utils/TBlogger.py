@@ -1,10 +1,41 @@
-class TBLogger:
-    def __init__(self, name, writer):
-        self.name = name
+from pytorch_lightning.loggers.base import LightningLoggerBase, rank_zero_experiment
+from pytorch_lightning.utilities.distributed import rank_zero_only
+
+
+class TBLogger(LightningLoggerBase):
+    def __init__(self, writer):
+        super().__init__()
         self.writer = writer
         self.training_prefix = 'train'
         self.testing_prefix = 'test'
         self.step = 0
+
+    @property
+    def name(self):
+        return 'MyLogger'
+
+    @property
+    def version(self):
+        return '0.1'
+
+    @rank_zero_only
+    def log_hyperparams(self, params):
+        pass
+
+    @rank_zero_only
+    def log_metrics_ts(self, name, results, loss, log_probs, klds):
+        if name == 'train':
+            self.write_training_logs(results, loss, log_probs, klds)
+        if name == 'test':
+            self.write_testing_logs(results, loss, log_probs, klds)
+
+    @rank_zero_only
+    def save(selfs):
+        pass
+
+    @rank_zero_only
+    def finalize(self, status):
+        pass
 
     def write_log_probs(self, name, log_probs):
         self.writer.add_scalars('%s/LogProb' % name,

@@ -16,7 +16,7 @@ def get_latent_samples(model, latents, n_imp_samples, mod_names=None):
     c_emb = model.reparameterize(l_c_m_rep, l_c_lv_rep)
     styles = dict()
     c = {'mu': l_c_m_rep, 'logvar': l_c_lv_rep, 'z': c_emb}
-    if model.flags.factorized_representation:
+    if model.config.method_mods['factorized_representation']:
         for k, key in enumerate(l_s.keys()):
             l_s_mod = l_s[key]
             l_s_m_rep = l_s_mod[0].unsqueeze(0).repeat(n_imp_samples, 1, 1)
@@ -78,7 +78,7 @@ def unit_gaussian_log_pdf(x):
     return torch.sum(log_pdf, dim=1)
 
 
-def log_marginal_estimate(flags, n_samples, likelihood, image, style, content, dynamic_prior=None):
+def log_marginal_estimate(config, n_samples, likelihood, image, style, content, dynamic_prior=None):
     r"""Estimate log p(x). NOTE: this is not the objective that
     should be directly optimized.
     @param ss_list: list of sufficient stats, i.e., list of
@@ -92,7 +92,7 @@ def log_marginal_estimate(flags, n_samples, likelihood, image, style, content, d
     @param logvar: torch.Tensor (batch_size x # samples x z dim)
                    log-variance of variational distribution
     """
-    batch_size = flags.batch_size
+    batch_size = config.batch_size
     if style is not None:
         z_style = style['z']
         logvar_style = style['logvar']
@@ -139,7 +139,7 @@ def log_marginal_estimate(flags, n_samples, likelihood, image, style, content, d
     return torch.mean(log_p)
 
 
-def log_joint_estimate(flags, n_samples, likelihoods, targets, styles, content, dynamic_prior=None):
+def log_joint_estimate(config, n_samples, likelihoods, targets, styles, content, dynamic_prior=None):
     r"""Estimate log p(x,y).
     @param recon_image: torch.Tensor (batch size x # samples x 784)
                         reconstructed means on bernoulli
@@ -156,7 +156,7 @@ def log_joint_estimate(flags, n_samples, likelihoods, targets, styles, content, 
     @param logvar: torch.Tensor (batch_size x # samples x z dim)
                    log-variance of variational distribution
     """
-    batch_size = flags.batch_size
+    batch_size = config.batch_size
     if styles is not None:
         styles_log_q_z_given_x_2d = dict()
         styles_p_z_2d = dict()
@@ -177,7 +177,7 @@ def log_joint_estimate(flags, n_samples, likelihoods, targets, styles, content, 
 
     num_mods = len(styles.keys())
     log_px_zs = torch.zeros(num_mods, batch_size * n_samples)
-    log_px_zs = log_px_zs.to(flags.device)
+    log_px_zs = log_px_zs.to(config.device)
     for k, key in enumerate(styles.keys()):
         batch_d = targets[key]
         d_shape = batch_d.shape

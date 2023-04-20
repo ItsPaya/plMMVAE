@@ -117,13 +117,13 @@ class SVHNMNIST(VisionDataset):
         warnings.warn("test_data has been renamed data")
         return self.data_mnist
 
-    def __init__(self, flags, alphabet, train=True, transform=None, target_transform=None):
-        super(SVHNMNIST, self).__init__(flags.dir_data)
-        self.flags = flags
+    def __init__(self, config, alphabet, train=True, transform=None, target_transform=None):
+        super(SVHNMNIST, self).__init__(config.dir['data_path'])  # flags.dir_data
+        self.config = config
         self.dataset = 'MNIST_SVHN'
         self.dataset_mnist = 'MNIST'
         self.dataset_svhn = 'SVHN'
-        self.len_sequence = flags.len_sequence
+        self.len_sequence = config.len_sequence
         self.transform = transform
         self.target_transform = target_transform
         self.train = train  # training set or test set
@@ -184,7 +184,7 @@ class SVHNMNIST(VisionDataset):
         self.mnist_idx, self.svhn_idx = rand_match_on_idx(mnist_l, mnist_li,
                                                           svhn_l, svhn_li,
                                                           max_d=10000,
-                                                          dm=flags.data_multiplications)
+                                                          dm=config.data_multi)
 
     def __getitem__(self, index):
         """

@@ -85,16 +85,16 @@ def make_res_block_decoder(channels_in, channels_out, kernelsize, stride, paddin
 
 
 class ClfText(nn.Module):
-    def __init__(self, flags):
+    def __init__(self, config):
         super(ClfText, self).__init__()
-        self.flags = flags
-        self.conv1 = nn.Conv1d(flags.num_features, 2 * flags.dim, kernel_size=1)
-        self.resblock_1 = make_res_block_encoder(2 * flags.dim, 3 * flags.dim, kernelsize=4, stride=2, padding=1,
+        self.config = config
+        self.conv1 = nn.Conv1d(config.num_features, 2 * config.dim, kernel_size=1)
+        self.resblock_1 = make_res_block_encoder(2 * config.dim, 3 * config.dim, kernelsize=4, stride=2, padding=1,
                                                  dilation=1)
-        self.resblock_4 = make_res_block_encoder(3 * flags.dim, 2 * flags.dim, kernelsize=4, stride=2, padding=0,
+        self.resblock_4 = make_res_block_encoder(3 * config.dim, 2 * config.dim, kernelsize=4, stride=2, padding=0,
                                                  dilation=1)
         self.dropout = nn.Dropout(p=0.5, inplace=False)
-        self.linear = nn.Linear(in_features=2 * flags.dim, out_features=10, bias=True)  # 10 is the number of classes
+        self.linear = nn.Linear(in_features=2 * config.dim, out_features=10, bias=True)  # 10 is the number of classes
         self.sigmoid = nn.Sigmoid()
 
     def forward(self, x):
