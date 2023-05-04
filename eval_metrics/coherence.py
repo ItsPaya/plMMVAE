@@ -1,13 +1,6 @@
-import sys
-import os
-
 import numpy as np
 
-import torch
-import torch.nn as nn
-from torch.autograd import Variable
 from torch.utils.data import DataLoader
-
 from utils.save_samples import save_generated_samples_singlegroup
 
 
@@ -46,7 +39,6 @@ def calculate_coherence(exp, samples):
             samples_mod = samples[mod.name]
             attr_mod = clf_mod(samples_mod)
             output_prob_mod = attr_mod.cpu().data.numpy()
-            # might remove .cpu...
             pred_mod = np.argmax(output_prob_mod, axis=1).astype(int)
             pred_mods[k, :] = pred_mod
         coh_mods = np.all(pred_mods == pred_mods[0, :], axis=0)
@@ -60,7 +52,6 @@ def test_generation(exp, dm):
     mm_vae = exp.mm_vae
     subsets = exp.subsets
 
-    gen_perf = dict()
     gen_perf = {'cond': dict(),
                 'random': dict()}
     for j, l_key in enumerate(exp.labels):
@@ -72,10 +63,12 @@ def test_generation(exp, dm):
                     gen_perf['cond'][l_key][s_key][m_key] = []
         gen_perf['random'][l_key] = []
 
-    d_loader = dm.test_dataloader()
+    # d_loader = dm.test_dataloader()
+    d_loader = DataLoader(dm.dataset_test,
+                          batch_size=exp.config.batch_size,
+                          shuffle=True,
+                          num_workers=4, drop_last=True)
 
-    # num_batches_epoch = int(dm.dataset_test.__len__() / float(exp.config.batch_size))
-    # cnt_s = 0
     for iteration, batch in enumerate(d_loader):
         batch_d = batch[0]
         batch_l = batch[1]
@@ -91,6 +84,8 @@ def test_generation(exp, dm):
             save_generated_samples_singlegroup(exp, iteration,
                                                'real',
                                                batch_d)
+        for k, m_key in enumerate(batch_d.keys()):  # or as in repo enum(mods.keys())
+            batch_d[m_key] = batch_d[m_key].to(exp.device)
 
         inferred = mm_vae.inference(batch_d)
         lr_subsets = inferred['subsets']
@@ -102,7 +97,7 @@ def test_generation(exp, dm):
             for j, l_key in enumerate(exp.labels):
                 for m, m_key in enumerate(mods.keys()):
                     gen_perf['cond'][l_key][s_key][m_key].append(clf_cg[l_key][m_key])
-            if (exp.config.batch_size * iteration) < exp.config.num_samples_fid:
+            if (exp.config.batch_size * iteration) < exp.config.evaluation['num_samples_fid']:
                 save_generated_samples_singlegroup(exp, iteration,
                                                    s_key,
                                                    cg[s_key])

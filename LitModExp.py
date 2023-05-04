@@ -5,7 +5,6 @@ from itertools import chain, combinations
 
 import numpy as np
 import torch
-import torch.nn as nn
 import pytorch_lightning as pl
 from torch import optim
 from torch.autograd import Variable
@@ -49,11 +48,11 @@ class MultiModVAE(pl.LightningModule, ABC):
         self.config.num_features = len(alphabet)
 
         self.num_modalities = self.config.num_mods
-        self.modalities = self.set_modalities()  # get from config
+        self.modalities = self.set_modalities()
         self.subsets = self.set_subsets()
 
-        self.mm_vae = self.get_model()  # get from config
-        self.clfs = self.set_clfs()  # get from config
+        self.mm_vae = self.get_model()
+        self.clfs = self.set_clfs()
         self.optimizer = None
         self.rec_weights = self.set_rec_weights()
         self.style_weights = self.set_style_weights()
@@ -65,7 +64,6 @@ class MultiModVAE(pl.LightningModule, ABC):
         self.labels = ['digit']
 
     def get_model(self):
-        # make it to choose model via config? with provided params
         if self.config.dataset == 'MMNIST':
             model = VAEMMNIST(self.config, self.modalities, self.subsets)
         else:
@@ -83,17 +81,16 @@ class MultiModVAE(pl.LightningModule, ABC):
         latents = results['latents']
         l_mods = latents['modalities']
 
-        self.log('train_loss', total_loss.data.item(), prog_bar=True, on_step=True, on_epoch=True)
+        self.log('train_loss', total_loss.data.item(), prog_bar=True, on_step=False, on_epoch=True)
         self.log_dict({'train_log_probs': log_probs,
-                       'train_klds': klds}, on_epoch=True, on_step=True)
+                       'train_klds': klds}, on_epoch=True, on_step=False)
         self.log('train_group_divergence', {'group_div': results['joint_divergence'].item()},
-                 on_epoch=True, on_step=True)
+                 on_epoch=True, on_step=False)
         for k, key in enumerate(l_mods.keys()):
             if not l_mods[key][0] is None:
-                self.log_dict({'train_mu': l_mods[key][0].mean().item()}, on_epoch=True, on_step=True)
+                self.log_dict({'train_mu': l_mods[key][0].mean().item()}, on_epoch=True, on_step=False)
             if not l_mods[key][1] is None:
-                self.log('train_logvar', l_mods[key][1].mean().item(), on_epoch=True, on_step=True)
-        # self.logger.write_training_logs(results, total_loss, log_probs, klds)
+                self.log('train_logvar', l_mods[key][1].mean().item(), on_epoch=True, on_step=False)
 
         return basic_routine['loss']
 
@@ -104,22 +101,19 @@ class MultiModVAE(pl.LightningModule, ABC):
         klds = basic_routine['klds']
         log_probs = basic_routine['log_probs']
 
-        # self.log_dict({'val_results': results, 'bal_tot_loss': total_loss, 'val_klds': klds,
-        # 'val_log_probs': log_probs}, on_epoch=True)
-
         latents = results['latents']
         l_mods = latents['modalities']
 
-        self.log('val_loss', total_loss.data.item(), prog_bar=True, on_step=True, on_epoch=True)
+        self.log('val_loss', total_loss.data.item(), prog_bar=True, on_step=False, on_epoch=True)
         self.log_dict({'val_log_probs': log_probs,
-                       'val_klds': klds}, on_epoch=True, on_step=True)
+                       'val_klds': klds}, on_epoch=True, on_step=False)
         self.log('val_group_divergence', results['joint_divergence'].item(),
-                 on_epoch=True, on_step=True, prog_bar=True)
+                 on_epoch=True, on_step=False, prog_bar=True)
         for k, key in enumerate(l_mods.keys()):
             if not l_mods[key][0] is None:
-                self.log_dict({'val_mu': l_mods[key][0].mean().item()}, on_epoch=True, on_step=True)
+                self.log_dict({'val_mu': l_mods[key][0].mean().item()}, on_epoch=True, on_step=False)
             if not l_mods[key][1] is None:
-                self.log('val_logvar', l_mods[key][1].mean().item(), on_epoch=True, on_step=True)
+                self.log('val_logvar', l_mods[key][1].mean().item(), on_epoch=True, on_step=False)
 
         return basic_routine['loss']
 
@@ -130,24 +124,19 @@ class MultiModVAE(pl.LightningModule, ABC):
         klds = basic_routine['klds']
         log_probs = basic_routine['log_probs']
 
-        # self.log_dict({'val_results': results, 'bal_tot_loss': total_loss, 'val_klds': klds,
-        # 'val_log_probs': log_probs}, on_epoch=True)
         latents = results['latents']
         l_mods = latents['modalities']
 
-        self.log_dict({'test_loss': total_loss}, on_epoch=True, on_step=True, prog_bar=True)
-        self.log_dict({'ts_log_probs': log_probs, 'ts_klds': klds}, on_epoch=True, on_step=True)
+        self.log_dict({'test_loss': total_loss}, on_epoch=True, on_step=False, prog_bar=True)
+        self.log_dict({'ts_log_probs': log_probs, 'ts_klds': klds}, on_epoch=True, on_step=False)
         self.log_dict({'ts_group_div': results['joint_divergence'].item()},
-                      on_epoch=True, on_step=True, prog_bar=True)
+                      on_epoch=True, on_step=False, prog_bar=True)
         for k, key in enumerate(l_mods.keys()):
             if not l_mods[key][0] is None:
-                self.log_dict({'ts_mu': l_mods[key][0].mean().item()}, on_epoch=True, on_step=True)
+                self.log_dict({'ts_mu': l_mods[key][0].mean().item()}, on_epoch=True, on_step=False)
             if not l_mods[key][1] is None:
-                self.log('ts_logvar', l_mods[key][1].mean().item(), on_epoch=True, on_step=True)
+                self.log('ts_logvar', l_mods[key][1].mean().item(), on_epoch=True, on_step=False)
 
-        return basic_routine['loss']
-
-    def on_test_epoch_end(self):
         self.test_samples = self.get_test_samples()
         epoch = self.current_epoch
         plots = generate_plots(self, epoch)
@@ -158,8 +147,7 @@ class MultiModVAE(pl.LightningModule, ABC):
                 self.logger.experiment.add_image(p_key + '_' + name,
                                                  fig, epoch, dataformats='HWC')
 
-        if (epoch + 1) % self.config.evaluation['eval_freq'] == 0 or\
-                (epoch + 1) == self.config.trainer_params['max_epochs']:
+        if (epoch + 1) % self.config.evaluation['eval_freq'] == 0 or (epoch + 1) == self.config.trainer_params['max_epochs']:
             if self.config.evaluation['eval_lr']:
                 clf_lr = train_clf_lr_all_subsets(self, self.trainer.datamodule)
                 lr_eval = test_clf_lr_all_subsets(epoch, clf_lr, self, self.trainer.datamodule)
@@ -187,6 +175,8 @@ class MultiModVAE(pl.LightningModule, ABC):
                 prd_scores = calc_prd_score(self)
                 self.log('PRD', prd_scores, on_epoch=True)
 
+        return basic_routine['loss']
+
     def basic_routine(self, batch):
         beta_style = self.config.beta_values['beta_style']
         beta_content = self.config.beta_values['beta_content']
@@ -196,7 +186,6 @@ class MultiModVAE(pl.LightningModule, ABC):
         batch_d = batch[0]
         batch_l = batch[1]
         mods = self.modalities
-        # not sure if needed
         for k, m_key in enumerate(batch_d.keys()):
             batch_d[m_key] = Variable(batch_d[m_key]).to(self.device)
 
@@ -268,26 +257,20 @@ class MultiModVAE(pl.LightningModule, ABC):
                 mod = self.modalities[m_key]
                 numel_mod = mod.data_size.numel()
                 rec_weights[mod.name] = float(ref_mod_d_size / numel_mod)
-        elif self.config.dataset == 'MMNIST':
+        else:
             for k, m_key in enumerate(self.modalities.keys()):
                 mod = self.modalities[m_key]
                 numel_mod = mod.data_size.numel()
                 rec_weights[mod.name] = 1.0
-        else:
-            raise NotImplementedError
         return rec_weights
 
     def set_style_weights(self):
-        if self.config.dataset == 'SVHN_MNIST_text':
-            weights = dict()
-            weights['mnist'] = self.config.beta_values['beta_m1_style']
-            weights['svhn'] = self.config.beta_values['beta_m2_style']
-            weights['text'] = self.config.beta_values['beta_m3_style']
-        elif self.config.dataset == 'MMNIST':
+        if len(self.config.mods) > 1:
+            weights = {m['mod_type']: m['beta_style']
+                       for m in self.config.mods}
+        else:
             weights = {"m%d" % m: self.config.beta_values['beta_style']
                        for m in range(self.num_modalities)}
-        else:
-            raise NotImplementedError
         return weights
 
     def get_test_samples(self, num_images=10):
@@ -298,7 +281,7 @@ class MultiModVAE(pl.LightningModule, ABC):
         for i in range(num_images):
             while True:
                 if self.config.dataset == 'MMNIST':
-                    ix = random.randint(0, n_test-1)
+                    ix = random.randint(0, n_test - 1)
                     sample, target = dataset_test[ix]
                 else:
                     sample, target = dataset_test.__getitem__(random.randint(0, n_test))
@@ -321,7 +304,7 @@ class MultiModVAE(pl.LightningModule, ABC):
         return self.eval_metric(labels, pred)
 
     def set_clfs(self):
-        # ToDo swap model creation to change from config
+        #ToDo remove map location before upload
         if self.config.dataset == 'SVHN_MNIST_text':
             model_clf_m1 = None
             model_clf_m2 = None
@@ -329,23 +312,26 @@ class MultiModVAE(pl.LightningModule, ABC):
             if self.config.evaluation['use_clf']:
                 model_clf_m1 = ClfImgMNIST()
                 model_clf_m1.load_state_dict(torch.load(os.path.join(self.config.dir['clf_path'],
-                                                                     self.config.clf_save_m1), map_location=torch.device('cpu')))
-                # model_clf_m1 = model_clf_m1.to(self.device)
+                                                                     self.config.mods[0]['clf_save']),
+                                                        map_location=torch.device('cpu')))
+                model_clf_m1 = model_clf_m1.to(self.device)
 
                 model_clf_m2 = ClfImgSVHN()
                 model_clf_m2.load_state_dict(torch.load(os.path.join(self.config.dir['clf_path'],
-                                                                     self.config.clf_save_m2), map_location=torch.device('cpu')))
-                # model_clf_m2 = model_clf_m2.to(self.device)
+                                                                     self.config.mods[1]['clf_save']),
+                                                        map_location=torch.device('cpu')))
+                model_clf_m2 = model_clf_m2.to(self.device)
 
                 model_clf_m3 = ClfText(self.config)
                 model_clf_m3.load_state_dict(torch.load(os.path.join(self.config.dir['clf_path'],
-                                                                     self.config.clf_save_m3), map_location=torch.device('cpu')))
-                # model_clf_m3 = model_clf_m3.to(self.device)
+                                                                     self.config.mods[2]['clf_save']),
+                                                        map_location=torch.device('cpu')))
+                model_clf_m3 = model_clf_m3.to(self.device)
 
             clfs = {'mnist': model_clf_m1,
                     'svhn': model_clf_m2,
                     'text': model_clf_m3}
-        elif self.config.dataset == 'MMNIST':
+        else:
             clfs = {"m%d" % m: None for m in range(self.num_modalities)}
             if self.config.evaluation['use_clf']:
                 for m, fp in enumerate(self.config.dir['pretrained_clf_paths']):
@@ -359,15 +345,14 @@ class MultiModVAE(pl.LightningModule, ABC):
         return clfs
 
     def set_modalities(self):
-        #TODO swap such that simply modify from config
         if self.config.dataset == 'SVHN_MNIST_text':
             mod1 = MNIST('mnist', EncoderImg(self.config), DecoderImg(self.config),
-                         self.config.class_dim, self.config.style_m1_dim, 'laplace')
+                         self.config.class_dim, self.config.mods[0]['style_dim'], self.config.mods[0]['likelihood'])
             mod2 = SVHN('svhn', EncoderSVHN(self.config), DecoderSVHN(self.config),
-                        self.config.class_dim, self.config.style_m2_dim, 'laplace',
+                        self.config.class_dim, self.config.mods[1]['style_dim'], self.config.mods[1]['likelihood'],
                         self.plot_img_size)
             mod3 = Text('text', EncoderText(self.config), DecoderText(self.config),
-                        self.config.class_dim, self.config.style_m3_dim, 'categorical',
+                        self.config.class_dim, self.config.mods[2]['style_dim'], self.config.mods[2]['likelihood'],
                         self.config.len_sequence,
                         self.alphabet,
                         self.plot_img_size,

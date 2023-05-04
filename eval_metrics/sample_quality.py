@@ -1,19 +1,12 @@
-
 import os
 
 import numpy as np
 import glob
 
-import torch
-from torch.autograd import Variable
-from torchvision.utils import save_image
-from torch.utils.data import DataLoader
-
 from fid.inception import InceptionV3
 from fid.fid_score import get_activations
 from fid.fid_score import calculate_frechet_distance
 
-from utils import text as text
 import prd_score.prd_score as prd
 
 

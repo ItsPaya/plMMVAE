@@ -1,7 +1,5 @@
 import sys
-import random
 
-import torch
 import torch.utils.data as data
 
 import warnings
@@ -11,11 +9,8 @@ import os.path
 import gzip
 import numpy as np
 import torch
-import codecs
 
-from utils.text import one_hot_encode
 from utils.text import create_text_from_label_mnist
-from utils.text import char2Index
 
 digit_text_german = ['null', 'eins', 'zwei', 'drei', 'vier', 'fuenf', 'sechs', 'sieben', 'acht', 'neun']
 digit_text_english = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine']
@@ -118,7 +113,7 @@ class SVHNMNIST(VisionDataset):
         return self.data_mnist
 
     def __init__(self, config, alphabet, train=True, transform=None, target_transform=None):
-        super(SVHNMNIST, self).__init__(config.dir['data_path'])  # flags.dir_data
+        super(SVHNMNIST, self).__init__(os.path.expandvars(config.dir['data_path']))  # flags.dir_data
         self.config = config
         self.dataset = 'MNIST_SVHN'
         self.dataset_mnist = 'MNIST'
@@ -129,9 +124,9 @@ class SVHNMNIST(VisionDataset):
         self.train = train  # training set or test set
         self.alphabet = alphabet
 
-        self.dir_svhn = 'data/SVHN'
-        self.dir_mnist = 'data/MNIST'
-        self.dir_ms = 'data/MNIST_SVHN'
+        self.dir_svhn = os.path.join(self.root, self.dataset_svhn)  # 'data/SVHN'
+        # self.dir_mnist = 'data/MNIST'
+        # self.dir_ms = 'data/MNIST_SVHN'
         print(self.dir_svhn)
 
         if not self._check_exists_mnist():
@@ -229,20 +224,24 @@ class SVHNMNIST(VisionDataset):
 
     @property
     def raw_folder(self):
-        return os.path.join(self.dir_ms, 'raw')
+        # os.path.join(self.dir_ms, 'raw')
+        return os.path.join(self.root, self.dataset, 'raw')
 
     @property
     def processed_folder(self):
-        return os.path.join(self.dir_mnist, 'processed')
+        # return os.path.join(self.dir_mnist, 'processed')
+        return os.path.join(self.root, self.dataset_mnist, 'processed')
 
     @property
     def class_to_idx(self):
         return {_class: i for i, _class in enumerate(self.classes)}
 
     def _check_exists_mnist(self):
-        print(self.processed_folder)
-        return (os.path.exists(os.path.join(self.processed_folder, self.training_file_mnist)) and
-                os.path.exists(os.path.join(self.processed_folder, self.test_file_mnist)))
+        # print(self.processed_folder)
+        return (os.path.exists(os.path.join(self.processed_folder,
+                                            self.training_file_mnist)) and
+                os.path.exists(os.path.join(self.processed_folder,
+                                            self.test_file_mnist)))
 
     def _check_exists_svhn(self):
         return (os.path.exists(os.path.join(self.dir_svhn,

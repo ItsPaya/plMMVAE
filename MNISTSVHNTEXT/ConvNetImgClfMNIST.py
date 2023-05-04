@@ -1,9 +1,10 @@
 
 import torch
 import torch.nn as nn
+import pytorch_lightning as pl
 
 
-class ClfImg(nn.Module):
+class ClfImg(pl.LightningModule):
     def __init__(self):
         super(ClfImg, self).__init__()
         self.conv1 = nn.Conv2d(1, 32, kernel_size=4, stride=2)

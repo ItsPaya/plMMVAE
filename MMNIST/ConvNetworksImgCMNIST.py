@@ -69,4 +69,4 @@ class DecoderImg(pl.LightningModule):
             z = class_latent_space
         x_hat = self.decoder(z)
         # x_hat = torch.sigmoid(x_hat)
-        return x_hat, torch.tensor(0.75)  # NOTE: consider learning scale param, too
+        return x_hat, torch.tensor(0.75).to(z.device)  # NOTE: consider learning scale param, too

@@ -1,11 +1,9 @@
-import torch
 import torch.nn as nn
-
-from MNISTSVHNTEXT.ConvNetTextMNIST import FeatureEncText
+import pytorch_lightning as pl
 
 
 # Residual block
-class ResidualBlockEncoder(nn.Module):
+class ResidualBlockEncoder(pl.LightningModule):
     def __init__(self, channels_in, channels_out, kernelsize, stride, padding, dilation, downsample):
         super(ResidualBlockEncoder, self).__init__()
         self.bn1 = nn.BatchNorm1d(channels_in)
@@ -30,7 +28,7 @@ class ResidualBlockEncoder(nn.Module):
         return out
 
 
-class ResidualBlockDecoder(nn.Module):
+class ResidualBlockDecoder(pl.LightningModule):
     def __init__(self, channels_in, channels_out, kernelsize, stride, padding, dilation, upsample):
         super(ResidualBlockDecoder, self).__init__()
         self.bn1 = nn.BatchNorm1d(channels_in)
@@ -64,8 +62,7 @@ def make_res_block_encoder(channels_in, channels_out, kernelsize, stride, paddin
                                              padding=padding,
                                              dilation=dilation),
                                    nn.BatchNorm1d(channels_out))
-    layers = []
-    layers.append(ResidualBlockEncoder(channels_in, channels_out, kernelsize, stride, padding, dilation, downsample))
+    layers = [ResidualBlockEncoder(channels_in, channels_out, kernelsize, stride, padding, dilation, downsample)]
     return nn.Sequential(*layers)
 
 
@@ -79,12 +76,11 @@ def make_res_block_decoder(channels_in, channels_out, kernelsize, stride, paddin
                                                     dilation=dilation,
                                                     output_padding=1),
                                  nn.BatchNorm1d(channels_out))
-    layers = []
-    layers.append(ResidualBlockDecoder(channels_in, channels_out, kernelsize, stride, padding, dilation, upsample))
+    layers = [ResidualBlockDecoder(channels_in, channels_out, kernelsize, stride, padding, dilation, upsample)]
     return nn.Sequential(*layers)
 
 
-class ClfText(nn.Module):
+class ClfText(pl.LightningModule):
     def __init__(self, config):
         super(ClfText, self).__init__()
         self.config = config

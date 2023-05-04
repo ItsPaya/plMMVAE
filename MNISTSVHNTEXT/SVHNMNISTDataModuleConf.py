@@ -1,27 +1,16 @@
-import os
-
 import PIL.Image
-import torch
-import torch.nn as nn
 import pytorch_lightning as pl
-import torch.nn.functional as f
-from PIL.Image import Image as Image
 
-from torch.utils.data import DataLoader, Dataset, random_split
+from torch.utils.data import DataLoader, random_split
 from torchvision import transforms as transforms
 
 from MNISTSVHNTEXT.SVHNMNISTDataset import SVHNMNIST
-
-# BATCH_SIZE = 256
 
 
 class SVHNMNISTDataModuleC(pl.LightningDataModule):
     def __init__(self, config, alphabet):
         super(SVHNMNISTDataModuleC, self).__init__()
-        self.test = None
         self.config = config
-        self.val = None
-        self.train = None
         self.alphabet = alphabet
         self.dataset_test = None
         self.dataset_train = None
@@ -41,17 +30,17 @@ class SVHNMNISTDataModuleC(pl.LightningDataModule):
                               self.alphabet,
                               train=True,
                               transform=transforms)
-        print(len(svhnmnist))
+        # print(len(svhnmnist))
         train_split = int(.8 * len(svhnmnist))
-        test_split = len(svhnmnist) - train_split
-        self.train, self.val = random_split(svhnmnist, [train_split, test_split])
-        self.test = SVHNMNIST(self.config,
-                              self.alphabet,
-                              train=False,
-                              transform=transforms)
-        self.dataset_train = self.train
-        self.dataset_val = self.val
-        self.dataset_test = self.test
+        val_split = len(svhnmnist) - train_split
+        train, val = random_split(svhnmnist, [train_split, val_split])
+        test = SVHNMNIST(self.config,
+                         self.alphabet,
+                         train=False,
+                         transform=transforms)
+        self.dataset_train = train
+        self.dataset_val = val
+        self.dataset_test = test
 
     def train_dataloader(self):
         return DataLoader(self.dataset_train, batch_size=self.batch_size, shuffle=True,

@@ -1,18 +1,15 @@
-from abc import ABC, abstractmethod
-
-import os
+from abc import ABC
 
 import torch
 import torch.nn as nn
+import pytorch_lightning as pl
+
 from torch.autograd import Variable
 
 from divergence_measures.mm_div import calc_alphaJSD_modalities
 from divergence_measures.mm_div import calc_group_divergence_moe
 from divergence_measures.mm_div import poe
 
-import pytorch_lightning as pl
-
-import utils.utils
 from utils.utils import reweight_weights
 from utils.utils import mixture_component_selection
 
@@ -111,7 +108,6 @@ class BaseMMVae(ABC, pl.LightningModule):
         return [mu_moe, logvar_moe]
 
     def poe_fusion(self, mus, logvars, weights=None):
-        # not sure if needed since .to and device calls get deleted
         if self.config.method_mods['modality_poe'] or mus.shape[0] == len(self.modalities.keys()):
             num_samples = mus[0].shape[0]
             mus = torch.cat((mus, torch.zeros(1, num_samples,
@@ -120,8 +116,6 @@ class BaseMMVae(ABC, pl.LightningModule):
             logvars = torch.cat((logvars, torch.zeros(1, num_samples,
                                                       self.config.class_dim).to(self.device)),
                                 dim=0)
-        # mus = torch.cat(mus, dim=0);
-        # logvars = torch.cat(logvars, dim=0);
         mu_poe, logvar_poe = poe(mus, logvars)
 
         return [mu_poe, logvar_poe]
@@ -210,7 +204,7 @@ class BaseMMVae(ABC, pl.LightningModule):
                         mods_avail = False
                 if mods_avail:
                     weights_subset = ((1 / float(len(mus_subset))) *
-                                      torch.ones(len(mus_subset)))
+                                      torch.ones(len(mus_subset)).to(self.device))
                     s_mu, s_logvar = self.modalitiy_fusion(mus_subset, logvars_subset, weights_subset)
                     distr_subsets[s_key] = [s_mu, s_logvar]
                     if self.fusion_condition(mods, input_batch):
@@ -278,8 +272,8 @@ class BaseMMVae(ABC, pl.LightningModule):
         styles = dict()
         for k, m_key in enumerate(self.modalities.keys()):
             mod = self.modalities[m_key]
-            s_mu = torch.zeros(num_samples, mod.style_dim)
-            s_logvar = torch.zeros(num_samples, mod.style_dim)
+            s_mu = torch.zeros(num_samples, mod.style_dim).to(self.device)
+            s_logvar = torch.zeros(num_samples, mod.style_dim).to(self.device)
             styles[m_key] = [s_mu, s_logvar]
         return styles
 
@@ -289,6 +283,7 @@ class BaseMMVae(ABC, pl.LightningModule):
             if self.config.method_mods['factorized_representation']:
                 mod = self.modalities[m_key]
                 z_style = torch.randn(num_samples, mod.style_dim)
+                z_style = z_style.to(self.device)
             else:
                 z_style = None
             styles[m_key] = z_style

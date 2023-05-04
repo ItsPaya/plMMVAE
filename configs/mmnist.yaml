@@ -1,6 +1,5 @@
-exp_name: mst  # set desired name
-# data parameters
-dataset: 'SVHN_MNIST_text' # select SVHN_MNIST_text of MMNIST
+exp_name: mmnist
+dataset: 'MMNIST'
 
 batch_size: 256
 num_workers: 4
@@ -9,7 +8,7 @@ class_dim: 20
 font_file: 'FreeSerif.ttf'
 labels:
 
-method: 'joint_elbos' # choose method for training the model (joint_elbo, poe, moe)
+method: 'joint_elbos' # choose from 'joint_elbos', 'moe', 'poe'
 method_mods:
   modality_jsd: False
   modality_poe: False
@@ -17,23 +16,21 @@ method_mods:
   joint_elbo: False
   poe_unimodal_elbos: True
   factorized_representation: False
-  # MMNIST
   include_prior_expert: False # is this the same as fac rep?
 
 dir:
-  # both
   data_path: './data/'
   clf_path: './trained_classifiers-20230327T173300Z-001/trained_classifiers/trained_clfs_mst'
-  fid_path: None #MMNIST ../MMNIST
+  fid_path:
   inception_path: './pt_inception-2015-12-05-6726825d.pth'
-  # MMNIST
+    # MMNIST
   pretrained_clf_paths:
     - './trained_classifiers-20230327T173300Z-001/trained_classifiers/trained_clfs_polyMNIST/pretrained_img_to_digit_clf_m0'
     - './trained_classifiers-20230327T173300Z-001/trained_classifiers/trained_clfs_polyMNIST/pretrained_img_to_digit_clf_m1'
     - './trained_classifiers-20230327T173300Z-001/trained_classifiers/trained_clfs_polyMNIST/pretrained_img_to_digit_clf_m2'
     - './trained_classifiers-20230327T173300Z-001/trained_classifiers/trained_clfs_polyMNIST/pretrained_img_to_digit_clf_m3'
     - './trained_classifiers-20230327T173300Z-001/trained_classifiers/trained_clfs_polyMNIST/pretrained_img_to_digit_clf_m4'
-# MMNIST
+  # MMNIST
 unimodal_datapaths:
   train:
     - './data/MMNIST/train/m0/'
@@ -48,44 +45,19 @@ unimodal_datapaths:
     - './data/MMNIST/test/m3/'
     - './data/MMNIST/test/m4/'
 
-# change modalities here for mst(m1: mnist, m2: svhn, m3:text) o/w need to adjust code
-modality_1:
-  mod_type: 'mnist'
-  encoder: 'IMG'
-  decoder: 'IMG'
-  likelihood: 'laplace'
-modality_2:
-  mod_type: 'svhn'
-  encoder: 'SVHN'
-  decoder: 'SVHN'
-  likelihood: 'laplace'
-modality_3:
-  mod_type: 'text'
-  encoder: 'Text'
-  decoder: 'Text'
-  likelihood: 'categorical'
-
-# exp_params:
-LR: 0.001 #0.0005 in job_polyMnist
+LR: 0.001
 manual_seed: 1265
 beta_values:
-  beta: 2.5 #MMNIST and mst 2.5
+  beta: 2.5
   beta_1: 0.9
   beta_2: 0.999
   beta_style: 1.0
   beta_content: 1.0
-  beta_m1_style: 1.0
-  beta_m2_style: 1.0
-  beta_m3_style: 1.0
+
 div_weight:
-  # MMNIST
-  div_weight:   # None, then use 1/num_mods+1
-  # SVHN_MNIST_text
-  div_weight_m1_content: 0.25
-  div_weight_m2_content: 0.25
-  div_weight_m3_content: 0.25
-  # both
-  div_weight_uniform_content: 0 # MMNIST None, then use 1/num_mods+1
+  div_weight:
+  div_weight_uniform_content:
+
 evaluation:
   use_clf: True # should generate samples be classified (default=False)
   calc_nll: True # calculation of nll (default=False)
@@ -96,10 +68,9 @@ evaluation:
   num_samples_fid: 10000 # numer of samples the calculation of fid is based on (default=10000)
   num_train_samples_lr: 500 # number of training samples to train the lr clf (default=500)
   save_figure: False # (default=False)
-  # MMNIST
   subsampled_reconstruction: True # (default=True)
+
 # data_dependent:
-# MMNIST
 style_dim: 0
 img_size_m1: 28
 num_channels_m1: 1
@@ -108,37 +79,11 @@ num_channels_m2: 3
 likelihood: 'laplace'
 kl_annealing: 0
 
-# SVHN_MNIST_text
-style_m1_dim: 0
-style_m2_dim: 0
-style_m3_dim: 0
-likelihood_m1: 'laplace' # output distribution
-likelihood_m2: 'laplace' # output distribution
-likelihood_m3: 'categorical' # output distribution
-
-# both
-len_sequence: 8 # (default=8)
-num_classes: 10 # number of classes on which the dataset trained (default=10)
-dim: 64 #(default=64)
-data_multi: 20 # number of pairs per sample
-num_hidden_layers: 1 #(default=1)
-
-# save and load SVHN_MNIST_text
-encoder_save_m1: 'encoderM1'
-encoder_save_m2: 'encoderM2'
-encoder_save_m3: 'encoderM3'
-decoder_save_m1: 'decoderM1'
-decoder_save_m2: 'decoderM2'
-decoder_save_m3: 'decoderM3'
-clf_save_m1: 'clf_m1'
-clf_save_m2: 'clf_m2'
-clf_save_m3: 'clf_m3'
-
 trainer_params:
-  device: 'auto'
-  accelerator: 'auto'
-  max_epochs: 1
+  devices: 'auto'
+  accelerator: 'gpu'
+  max_epochs: 100
 
 logging_params:
-  save_dir: "logs/"
-  name: "polyMNIST"
+  save_dir: 'logs/'
+  name: 'polyMnist'

@@ -1,22 +1,7 @@
 import os
 from distutils import dist
 
-import numpy as np
-import json
 import torch
-import torch.nn as nn
-from torchvision.utils import save_image
-from torchvision.utils import make_grid
-from torchvision import transforms
-import matplotlib.pyplot as plt
-from torch.autograd import Variable
-from mpl_toolkits.axes_grid1 import ImageGrid
-from torchvision.transforms import Compose, ToTensor
-
-from sklearn.metrics import confusion_matrix
-from sklearn.utils.multiclass import unique_labels
-
-import utils.text
 
 
 # Print iterations progress
@@ -66,7 +51,7 @@ def mixture_component_selection(config, mus, logvars, w_modalities=None):
     num_components = mus.shape[0]
     num_samples = mus.shape[1]
     if w_modalities is None:
-        w_modalities = torch.Tensor(config.alpha_modalities) # evt .to(device) needed
+        w_modalities = torch.Tensor(config.alpha_modalities)
     idx_start = []
     idx_end = []
     for k in range(0, num_components):

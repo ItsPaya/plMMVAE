@@ -1,18 +1,11 @@
-import os
-
 import PIL.Image
-import torch
-import torch.nn as nn
-import pytorch_lightning as pl
-import torch.nn.functional as f
-from PIL.Image import Image as Image
 
-from torch.utils.data import DataLoader, Dataset, random_split
+import pytorch_lightning as pl
+
+from torch.utils.data import DataLoader, random_split
 from torchvision import transforms as transforms
 
 from MNISTSVHNTEXT.SVHNMNISTDataset import SVHNMNIST
-
-# BATCH_SIZE = 256
 
 
 class SVHNMNISTDataModule(pl.LightningDataModule):

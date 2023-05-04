@@ -1,23 +1,11 @@
 import numpy as np
-from scipy.special import logsumexp
-from itertools import cycle
 import math
 
-import torch
-from torch.autograd import Variable
 from torch.utils.data import DataLoader
 
-import utils.utils
-from utils.likelihood import log_mean_exp
-from utils.likelihood import gaussian_log_pdf
-from utils.likelihood import unit_gaussian_log_pdf
 from utils.likelihood import get_latent_samples
-from utils.likelihood import get_dyn_prior
 from utils.likelihood import log_marginal_estimate
 from utils.likelihood import log_joint_estimate
-
-from divergence_measures.mm_div import alpha_poe
-from divergence_measures.mm_div import poe
 
 LOG2PI = float(np.log(2.0 * math.pi))
 
@@ -117,6 +105,8 @@ def estimate_likelihoods(exp, dm):
 
     for iteration, batch in enumerate(d_loader):
         batch_d = batch[0]
+        for m, m_key in enumerate(batch_d.keys()):
+            batch_d[m_key] = batch_d[m_key].to(exp.device)
 
         latents = model.inference(batch_d)
         for k, s_key in enumerate(subsets.keys()):

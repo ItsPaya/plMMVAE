@@ -1,8 +1,9 @@
 import torch
 import torch.nn as nn
+import pytorch_lightning as pl
 
 
-class FeatureEncText(nn.Module):
+class FeatureEncText(pl.LightningModule):
     def __init__(self, dim, num_features):
         super(FeatureEncText, self).__init__()
         self.dim = dim
@@ -23,15 +24,15 @@ class FeatureEncText(nn.Module):
         return h
 
 
-class EncoderText(nn.Module):
+class EncoderText(pl.LightningModule):
     def __init__(self, config):
         super(EncoderText, self).__init__()
         self.config = config
         self.text_feature_enc = FeatureEncText(config.dim, config.num_features)
         if config.method_mods['factorized_representation']:
             # style
-            self.style_mu = nn.Linear(in_features=2*config.dim, out_features=config.style_text_dim, bias=True)
-            self.style_logvar = nn.Linear(in_features=2*config.dim, out_features=config.style_text_dim, bias=True)
+            self.style_mu = nn.Linear(in_features=2*config.dim, out_features=config.mods[3]['style_dim'], bias=True)
+            self.style_logvar = nn.Linear(in_features=2*config.dim, out_features=config.mods[3]['style_dim'], bias=True)
             # class
             self.class_mu = nn.Linear(in_features=2*config.dim, out_features=config.class_dim, bias=True)
             self.class_logvar = nn.Linear(in_features=2*config.dim, out_features=config.class_dim, bias=True)
@@ -54,12 +55,12 @@ class EncoderText(nn.Module):
             return None, None, latent_space_mu, latent_space_logvar
 
 
-class DecoderText(nn.Module):
+class DecoderText(pl.LightningModule):
     def __init__(self, config):
         super(DecoderText, self).__init__()
         self.config = config
         if config.method_mods['factorized_representation']:
-            self.linear_factorized = nn.Linear(config.style_text_dim+config.class_dim,
+            self.linear_factorized = nn.Linear(config.mods[3]['style_dim']+config.class_dim,
                                                2*config.dim)
         else:
             self.linear = nn.Linear(config.class_dim, 2*config.dim)
