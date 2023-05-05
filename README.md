@@ -8,7 +8,7 @@ conda env create -f environment.yml  # create conda env
 conda activate gpu_env               # activate conda env
 ```
 Then same as for the old codebase https://github.com/thomassutter/MoPoE
-Download the data, inception network, and pretrained classifiers:
+download the data, inception network, and pretrained classifiers:
 ```bash
 curl -L -o tmp.zip https://drive.google.com/drive/folders/1lr-laYwjDq3AzalaIe9jN4shpt1wBsYM?usp=sharing
 unzip tmp.zip
