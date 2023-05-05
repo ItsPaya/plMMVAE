@@ -20,8 +20,8 @@ unzip PolyMNIST.zip -d data/
 
 Experiments can be started by running the respective `job_*` script.
 To choose between running the MVAE, MMVAE, and MoPoE-VAE, one needs to
-change the config's `METHOD` variabe to "poe", "moe", or "joint\_elbo"
-respectively.  By default, each experiment uses `METHOD="joint_elbo"`.
+change the config's `method` variabe to "poe", "moe", or "joint\_elbo"
+respectively.  By default, each experiment uses `method="joint_elbo"`.
 
 ### running MNIST-SVHN-Text
 ```bash
