@@ -38,14 +38,31 @@ def calc_gaussian_scaling_factor_self(PI, logvar1, norm_value=None):
     d = logvar1.shape[1]
     S = (1/(2*PI).pow(d/2))*torch.sum(logvar1.exp(), dim=1).pow(0.5)
     S = torch.sum(S)
+    # S = torch.sum(1 / (2*(PI*torch.exp(logvar1)).pow(0.5)));
     if norm_value is not None:
         S = S / float(norm_value)
     # print('S self: ' + str(S))
     return S
 
-def calc_kl_divergence_lb_gauss_mixture(config, index, mu1, logvar1, mus, logvars, norm_value=None):
+
+#def calc_kl_divergence_lb_gauss_mixture(flags, index, mu1, logvar1, mus, logvars, norm_value=None):
+#     klds = torch.zeros(mus.shape[0]+1)
+#     if flags.cuda:
+#         klds = klds.cuda();
+#
+#     klds[0] = calc_kl_divergence(mu1, logvar1, norm_value=norm_value);
+#     for k in range(0, mus.shape[0]):
+#         if k == index:
+#             kld = 0.0;
+#         else:
+#             kld = calc_kl_divergence(mu1, logvar1, mus[k], logvars[k], norm_value=norm_value);
+#         klds[k+1] = kld;
+#     kld_mixture = klds.mean();
+#     return kld_mixture;
+
+def calc_kl_divergence_lb_gauss_mixture(flags, index, mu1, logvar1, mus, logvars, norm_value=None):
     PI = torch.Tensor([math.pi])
-    w_modalities = torch.Tensor(config.alpha_modalities)
+    w_modalities = torch.Tensor(flags.alpha_modalities)
     w_modalities = reweight_weights(w_modalities)
 
     denom = w_modalities[0]*calc_gaussian_scaling_factor(PI, mu1, logvar1, norm_value=norm_value)
@@ -58,9 +75,9 @@ def calc_kl_divergence_lb_gauss_mixture(config, index, mu1, logvar1, mus, logvar
     return lb
 
 
-def calc_kl_divergence_ub_gauss_mixture(config, index, mu1, logvar1, mus, logvars, entropy, norm_value=None):
+def calc_kl_divergence_ub_gauss_mixture(flags, index, mu1, logvar1, mus, logvars, entropy, norm_value=None):
     PI = torch.Tensor([math.pi])
-    w_modalities = torch.Tensor(config.alpha_modalities)
+    w_modalities = torch.Tensor(flags.alpha_modalities)
     w_modalities = reweight_weights(w_modalities)
 
     nom = calc_gaussian_scaling_factor_self(PI, logvar1, norm_value=norm_value)
@@ -78,7 +95,7 @@ def calc_kl_divergence_ub_gauss_mixture(config, index, mu1, logvar1, mus, logvar
     return ub
 
 
-def calc_entropy_gauss(config, logvar, norm_value=None):
+def calc_entropy_gauss(flags, logvar, norm_value=None):
     PI = torch.Tensor([math.pi])
     ent = 0.5*torch.sum(torch.log(2*PI) + logvar + 1)
     if norm_value is not None:

@@ -1,5 +1,8 @@
+import torch
 import torch.nn as nn
 import pytorch_lightning as pl
+
+from MNISTSVHNTEXT.ConvNetTextMNIST import FeatureEncText
 
 
 # Residual block
@@ -62,7 +65,8 @@ def make_res_block_encoder(channels_in, channels_out, kernelsize, stride, paddin
                                              padding=padding,
                                              dilation=dilation),
                                    nn.BatchNorm1d(channels_out))
-    layers = [ResidualBlockEncoder(channels_in, channels_out, kernelsize, stride, padding, dilation, downsample)]
+    layers = []
+    layers.append(ResidualBlockEncoder(channels_in, channels_out, kernelsize, stride, padding, dilation, downsample))
     return nn.Sequential(*layers)
 
 
@@ -76,7 +80,8 @@ def make_res_block_decoder(channels_in, channels_out, kernelsize, stride, paddin
                                                     dilation=dilation,
                                                     output_padding=1),
                                  nn.BatchNorm1d(channels_out))
-    layers = [ResidualBlockDecoder(channels_in, channels_out, kernelsize, stride, padding, dilation, upsample)]
+    layers = []
+    layers.append(ResidualBlockDecoder(channels_in, channels_out, kernelsize, stride, padding, dilation, upsample))
     return nn.Sequential(*layers)
 
 

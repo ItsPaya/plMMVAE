@@ -1,9 +1,9 @@
+
 import torch
 import torch.nn as nn
 import pytorch_lightning as pl
 
 dataSize = torch.Size([1, 28, 28])
-
 
 class EncoderImg(pl.LightningModule):
     def __init__(self, config):
@@ -11,7 +11,8 @@ class EncoderImg(pl.LightningModule):
         self.config = config
         self.hidden_dim = 400
 
-        modules = [nn.Sequential(nn.Linear(784, self.hidden_dim), nn.ReLU(True))]
+        modules = []
+        modules.append(nn.Sequential(nn.Linear(784, self.hidden_dim), nn.ReLU(True)))
         modules.extend([nn.Sequential(nn.Linear(self.hidden_dim, self.hidden_dim), nn.ReLU(True))
                         for _ in range(config.num_hidden_layers - 1)])
         self.enc = nn.Sequential(*modules)
@@ -19,13 +20,12 @@ class EncoderImg(pl.LightningModule):
         if config.method_mods['factorized_representation']:
             # style
             self.style_mu = nn.Linear(in_features=self.hidden_dim, out_features=config.mods[0]['style_dim'], bias=True)
-            self.style_logvar = nn.Linear(in_features=self.hidden_dim, out_features=config.mods[0]['style_dim'],
-                                          bias=True)
+            self.style_logvar = nn.Linear(in_features=self.hidden_dim, out_features=config.mods[0]['style_dim'], bias=True)
             # class
             self.class_mu = nn.Linear(in_features=self.hidden_dim, out_features=config.class_dim, bias=True)
             self.class_logvar = nn.Linear(in_features=self.hidden_dim, out_features=config.class_dim, bias=True)
         else:
-            # non-factorized
+            #non-factorized
             self.hidden_mu = nn.Linear(in_features=self.hidden_dim, out_features=config.class_dim, bias=True)
             self.hidden_logvar = nn.Linear(in_features=self.hidden_dim, out_features=config.class_dim, bias=True)
 
@@ -59,8 +59,7 @@ class DecoderImg(pl.LightningModule):
         self.hidden_dim = 400
         modules = []
         if config.method_mods['factorized_representation']:
-            modules.append(nn.Sequential(nn.Linear(config.mods[0]['style_dim'] + config.class_dim, self.hidden_dim),
-                                         nn.ReLU(True)))
+            modules.append(nn.Sequential(nn.Linear(config.mods[0]['style_dim']+config.class_dim, self.hidden_dim), nn.ReLU(True)))
         else:
             modules.append(nn.Sequential(nn.Linear(config.class_dim, self.hidden_dim), nn.ReLU(True)))
 

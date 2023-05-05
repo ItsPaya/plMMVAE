@@ -19,10 +19,10 @@ if __name__ == '__main__':
     with open(f'{args.config}', 'r') as f:
         config = yaml.load(f)
 
-    config['dir']['data_path'] = os.path.expandvars(args.data)
+    config['dir']['data_path'] = os.path.expandvars(args.data_path)
     config['dir']['clf_path'] = os.path.expandvars(args.clf)
-    config['dir']['fid_path'] = os.path.expandvars(args.fid_path)
-    config['dir']['inception_path'] = os.path.expandvars(args.inception)
+    config['dir']['fid_path'] = os.path.expandvars(args.fid)
+    config['dir']['inception_path'] = os.path.expandvars(args.inception_state_dict)
 
     with open(f'{args.config}', 'w') as f:
         yaml.dump(config, f)

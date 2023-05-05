@@ -1,7 +1,8 @@
+import torch
 import torch.nn as nn
 import pytorch_lightning as pl
 
-from utils.utils import Flatten
+from utils.utils import Flatten, Unflatten
 
 
 class ClfImg(pl.LightningModule):

@@ -5,6 +5,8 @@ import sys
 
 import pytorch_lightning as pl
 import torch
+import yaml
+import ruamel.yaml
 from PIL import ImageFont
 from pytorch_lightning import seed_everything
 from pytorch_lightning.callbacks import TQDMProgressBar
@@ -12,8 +14,11 @@ from pytorch_lightning.loggers import TensorBoardLogger
 
 from Config import Config
 from LitModExp import MultiModVAE
+from LitModule import LitModule
+from MNISTSVHNTEXT.SVHNMNISTDataModule import SVHNMNISTDataModule
 from MNISTSVHNTEXT.SVHNMNISTDataModuleConf import SVHNMNISTDataModuleC
 from MMNIST.MMNISTDataModule import MMNISTDataModule
+from MNISTSVHNTEXT.flags import parser
 from utils.filehandling import create_dir_structure
 
 if __name__ == '__main__':
@@ -24,13 +29,12 @@ if __name__ == '__main__':
                          dest='filename',
                          metavar='FILE',
                          help='path to config file',
-                         default='configs/svhn_mnist_text.yaml')
-
+                         default='configs/mmnist.yaml')
     config = Config(parser2)
     config.device = torch.device('cuda' if use_cuda else 'cpu')
-
-    print(config.mods)
-    print(config.method_mods)
+    
+    print('config.mods: ' + str(config.mods))
+    print('config.method_mods: '+ str(config.method_mods))
 
     if config.method == 'poe':
         config.method_mods['modality_poe'] = True
@@ -48,7 +52,8 @@ if __name__ == '__main__':
     print(config.method_mods['modality_moe'])
     print(config.method_mods['modality_jsd'])
     print(config.method_mods['joint_elbo'])
-
+    
+    # set alpha_modalities and div_weights
     if hasattr(config, 'unimodal_datapaths'):
         assert len(config.unimodal_datapaths['train']) == len(config.unimodal_datapaths['test'])
         config.num_mods = len(config.unimodal_datapaths['train'])
@@ -70,14 +75,17 @@ if __name__ == '__main__':
 
     plot_img_size = torch.Size((3, 28, 28))
     font = ImageFont.truetype(font=config.font_file, size=38)
-    # print(config.dir['pretrained_clf_paths'])
-    print(config.num_mods)
+    
+    print (config.alpha_modalities)
+    print ('config.num_mods: ' + str(config.num_mods))
 
+    # set correct LightningDataModule
     if config.dataset == 'MMNIST':
         dm = MMNISTDataModule(config, alphabet)
     else:
         dm = SVHNMNISTDataModuleC(config, alphabet)
-
+    
+    # init LightningModule and logger
     mm_vae = MultiModVAE(config, font, plot_img_size, alphabet)
     tb_logger = TensorBoardLogger(save_dir=config.logging_params['save_dir'],
                                   name=config.logging_params['name'])
@@ -86,11 +94,13 @@ if __name__ == '__main__':
     seed_everything(config.manual_seed, True)
     # print(config.unimodal_datapaths['train'])
 
-    trainer = pl.Trainer(devices='auto', accelerator='cpu',
+    # init Trainer (many more flags available)
+    trainer = pl.Trainer(devices='auto', accelerator='gpu',
                          max_epochs=config.trainer_params['max_epochs'],
                          fast_dev_run=False, logger=tb_logger,
                          callbacks=[TQDMProgressBar(refresh_rate=20)])
 
+    # main work part
     trainer.fit(mm_vae, datamodule=dm)
     # trainer.validate(mm_vae, dm)
     results = trainer.test(mm_vae, dm)

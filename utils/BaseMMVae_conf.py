@@ -1,15 +1,18 @@
-from abc import ABC
+from abc import ABC, abstractmethod
+
+import os
 
 import torch
 import torch.nn as nn
-import pytorch_lightning as pl
-
 from torch.autograd import Variable
 
 from divergence_measures.mm_div import calc_alphaJSD_modalities
 from divergence_measures.mm_div import calc_group_divergence_moe
 from divergence_measures.mm_div import poe
 
+import pytorch_lightning as pl
+
+import utils.utils
 from utils.utils import reweight_weights
 from utils.utils import mixture_component_selection
 
@@ -108,6 +111,7 @@ class BaseMMVae(ABC, pl.LightningModule):
         return [mu_moe, logvar_moe]
 
     def poe_fusion(self, mus, logvars, weights=None):
+        # not sure if needed since .to and device calls get deleted
         if self.config.method_mods['modality_poe'] or mus.shape[0] == len(self.modalities.keys()):
             num_samples = mus[0].shape[0]
             mus = torch.cat((mus, torch.zeros(1, num_samples,
@@ -116,6 +120,8 @@ class BaseMMVae(ABC, pl.LightningModule):
             logvars = torch.cat((logvars, torch.zeros(1, num_samples,
                                                       self.config.class_dim).to(self.device)),
                                 dim=0)
+        # mus = torch.cat(mus, dim=0);
+        # logvars = torch.cat(logvars, dim=0);
         mu_poe, logvar_poe = poe(mus, logvars)
 
         return [mu_poe, logvar_poe]

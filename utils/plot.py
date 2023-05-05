@@ -6,6 +6,7 @@ from torchvision import transforms
 import utils.text as text
 
 from PIL import ImageDraw
+from PIL import ImageFont
 from PIL import Image
 
 

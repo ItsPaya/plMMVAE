@@ -1,5 +1,18 @@
+import sys
+import os
+
 import numpy as np
 
+import torch
+import torch.nn as nn
+from torch.autograd import Variable
+from torch.utils.data import DataLoader
+
+from sklearn.metrics import precision_score
+from sklearn.metrics import recall_score
+from sklearn.metrics import f1_score
+from sklearn.metrics import confusion_matrix
+from sklearn.metrics import accuracy_score
 from sklearn.linear_model import LogisticRegression
 
 
@@ -10,6 +23,7 @@ def train_clf_lr_all_subsets(exp, dm):
     d_loader = dm.train_dataloader()
 
     bs = exp.config.batch_size
+    # num_batches_epoch = int(dataset.__len__() / float(bs))
     class_dim = exp.config.class_dim
     n_samples = int(dataset.__len__())
     data_train = dict()
@@ -54,6 +68,7 @@ def test_clf_lr_all_subsets(epoch, clf_lr, exp, dm):
 
     d_loader = dm.test_dataloader()
 
+    # num_batches_epoch = int(dataset.__len__() / float(exp.config.batch_size))
     for iteration, batch in enumerate(d_loader):
         batch_d = batch[0]
         batch_l = batch[1]
@@ -64,6 +79,7 @@ def test_clf_lr_all_subsets(epoch, clf_lr, exp, dm):
         data_test = dict()
         for k, key in enumerate(lr_subsets.keys()):
             data_test[key] = lr_subsets[key][0].cpu().data.numpy()
+            # might remove from .cpu on
         evals = classify_latent_representations(exp,
                                                 epoch,
                                                 clf_lr,

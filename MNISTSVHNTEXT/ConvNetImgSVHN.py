@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 import pytorch_lightning as pl
 
-
 class EncoderSVHN(pl.LightningModule):
     def __init__(self, config):
         super(EncoderSVHN, self).__init__()
@@ -21,7 +20,7 @@ class EncoderSVHN(pl.LightningModule):
             self.class_mu = nn.Linear(in_features=128, out_features=config.class_dim, bias=True)
             self.class_logvar = nn.Linear(in_features=128, out_features=config.class_dim, bias=True)
         else:
-            # non-factorized
+            #non-factorized
             self.hidden_mu = nn.Linear(in_features=128, out_features=config.class_dim, bias=True)
             self.hidden_logvar = nn.Linear(in_features=128, out_features=config.class_dim, bias=True)
 
@@ -58,7 +57,7 @@ class DecoderSVHN(pl.LightningModule):
         super(DecoderSVHN, self).__init__()
         self.config = config
         if config.method_mods['factorized_representation']:
-            self.linear_factorized = nn.Linear(config.mods[1]['style_dim'] + config.class_dim, 128)
+            self.linear_factorized = nn.Linear(config.mods[1]['style_dim']+config.class_dim, 128)
         else:
             self.linear = nn.Linear(config.class_dim, 128)
         self.conv1 = nn.ConvTranspose2d(128, 64, kernel_size=4, stride=1, padding=0, dilation=1)

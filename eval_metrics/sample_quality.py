@@ -1,12 +1,19 @@
+
 import os
 
 import numpy as np
 import glob
 
+import torch
+from torch.autograd import Variable
+from torchvision.utils import save_image
+from torch.utils.data import DataLoader
+
 from fid.inception import InceptionV3
 from fid.fid_score import get_activations
 from fid.fid_score import calculate_frechet_distance
 
+from utils import text as text
 import prd_score.prd_score as prd
 
 
@@ -14,7 +21,8 @@ def calc_inception_features(exp, dims=2048, batch_size=128):
     block_idx = InceptionV3.BLOCK_INDEX_BY_DIM[dims]
 
     model = InceptionV3([block_idx],
-                        path_state_dict=exp.flags.inception_state_dict)
+                        path_state_dict=exp.config.dir['inception_path'])
+    model = model.to(exp.device)
 
     paths = exp.paths_fid
     for m, m_key in enumerate(exp.modalities.keys()):
@@ -54,6 +62,7 @@ def calculate_inception_features_for_gen_evaluation(config, paths, modality=None
     block_idx = InceptionV3.BLOCK_INDEX_BY_DIM[dims]
 
     model = InceptionV3([block_idx], path_state_dict=config.dir['inception_path'])
+    model = model.to(config.device)
 
     if 'random' in list(paths.keys()):
         dir_rand_gen = paths['random']
@@ -161,9 +170,9 @@ def calculate_prd_dict(feats_real, dict_feats_gen):
     return dict_fid
 
 
-def get_clf_activations(flags, data, model):
+def get_clf_activations(config, data, model):
     act = model.get_activations(data)
-    act = act.cpu().data.numpy().reshape(flags.batch_size, -1)
+    act = act.cpu().data.numpy().reshape(config.batch_size, -1)
     # alt. act = act.reshape(flags.batch_size, -1)
     return act
 

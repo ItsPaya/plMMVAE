@@ -5,6 +5,7 @@ from itertools import chain, combinations
 
 import numpy as np
 import torch
+import torch.nn as nn
 import pytorch_lightning as pl
 from torch import optim
 from torch.autograd import Variable
@@ -48,11 +49,11 @@ class MultiModVAE(pl.LightningModule, ABC):
         self.config.num_features = len(alphabet)
 
         self.num_modalities = self.config.num_mods
-        self.modalities = self.set_modalities()
+        self.modalities = self.set_modalities()  # get from config
         self.subsets = self.set_subsets()
 
-        self.mm_vae = self.get_model()
-        self.clfs = self.set_clfs()
+        self.mm_vae = self.get_model()  # get from config
+        self.clfs = self.set_clfs()  # get from config
         self.optimizer = None
         self.rec_weights = self.set_rec_weights()
         self.style_weights = self.set_style_weights()
@@ -64,6 +65,7 @@ class MultiModVAE(pl.LightningModule, ABC):
         self.labels = ['digit']
 
     def get_model(self):
+        # make it to choose model via config? with provided params
         if self.config.dataset == 'MMNIST':
             model = VAEMMNIST(self.config, self.modalities, self.subsets)
         else:
@@ -91,6 +93,7 @@ class MultiModVAE(pl.LightningModule, ABC):
                 self.log_dict({'train_mu': l_mods[key][0].mean().item()}, on_epoch=True, on_step=False)
             if not l_mods[key][1] is None:
                 self.log('train_logvar', l_mods[key][1].mean().item(), on_epoch=True, on_step=False)
+        # self.logger.write_training_logs(results, total_loss, log_probs, klds)
 
         return basic_routine['loss']
 
@@ -100,6 +103,9 @@ class MultiModVAE(pl.LightningModule, ABC):
         total_loss = basic_routine['loss']
         klds = basic_routine['klds']
         log_probs = basic_routine['log_probs']
+
+        # self.log_dict({'val_results': results, 'bal_tot_loss': total_loss, 'val_klds': klds,
+        # 'val_log_probs': log_probs}, on_epoch=True)
 
         latents = results['latents']
         l_mods = latents['modalities']
@@ -124,6 +130,8 @@ class MultiModVAE(pl.LightningModule, ABC):
         klds = basic_routine['klds']
         log_probs = basic_routine['log_probs']
 
+        # self.log_dict({'val_results': results, 'bal_tot_loss': total_loss, 'val_klds': klds,
+        # 'val_log_probs': log_probs}, on_epoch=True)
         latents = results['latents']
         l_mods = latents['modalities']
 
@@ -186,6 +194,7 @@ class MultiModVAE(pl.LightningModule, ABC):
         batch_d = batch[0]
         batch_l = batch[1]
         mods = self.modalities
+        # not sure if needed
         for k, m_key in enumerate(batch_d.keys()):
             batch_d[m_key] = Variable(batch_d[m_key]).to(self.device)
 
@@ -265,9 +274,12 @@ class MultiModVAE(pl.LightningModule, ABC):
         return rec_weights
 
     def set_style_weights(self):
-        if len(self.config.mods) > 1:
+        if self.config.dataset == 'SVHN_MNIST_text':
             weights = {m['mod_type']: m['beta_style']
                        for m in self.config.mods}
+        # if len(self.config.mods) > 1:
+          #   weights = {m['mod_type']: m['beta_style']
+            #            for m in self.config.mods}
         else:
             weights = {"m%d" % m: self.config.beta_values['beta_style']
                        for m in range(self.num_modalities)}
@@ -304,7 +316,7 @@ class MultiModVAE(pl.LightningModule, ABC):
         return self.eval_metric(labels, pred)
 
     def set_clfs(self):
-        #ToDo remove map location before upload
+        # ToDo swap model creation to change from config
         if self.config.dataset == 'SVHN_MNIST_text':
             model_clf_m1 = None
             model_clf_m2 = None
@@ -312,20 +324,17 @@ class MultiModVAE(pl.LightningModule, ABC):
             if self.config.evaluation['use_clf']:
                 model_clf_m1 = ClfImgMNIST()
                 model_clf_m1.load_state_dict(torch.load(os.path.join(self.config.dir['clf_path'],
-                                                                     self.config.mods[0]['clf_save']),
-                                                        map_location=torch.device('cpu')))
+                                                                     self.config.mods[0]['clf_save'])))
                 model_clf_m1 = model_clf_m1.to(self.device)
 
                 model_clf_m2 = ClfImgSVHN()
                 model_clf_m2.load_state_dict(torch.load(os.path.join(self.config.dir['clf_path'],
-                                                                     self.config.mods[1]['clf_save']),
-                                                        map_location=torch.device('cpu')))
+                                                                     self.config.mods[1]['clf_save'])))
                 model_clf_m2 = model_clf_m2.to(self.device)
 
                 model_clf_m3 = ClfText(self.config)
                 model_clf_m3.load_state_dict(torch.load(os.path.join(self.config.dir['clf_path'],
-                                                                     self.config.mods[2]['clf_save']),
-                                                        map_location=torch.device('cpu')))
+                                                                     self.config.mods[2]['clf_save'])))
                 model_clf_m3 = model_clf_m3.to(self.device)
 
             clfs = {'mnist': model_clf_m1,
@@ -336,7 +345,7 @@ class MultiModVAE(pl.LightningModule, ABC):
             if self.config.evaluation['use_clf']:
                 for m, fp in enumerate(self.config.dir['pretrained_clf_paths']):
                     model_clf = ClfImgCMNIST()
-                    model_clf.load_state_dict(torch.load(fp, map_location=torch.device('cpu')))
+                    model_clf.load_state_dict(torch.load(fp))
                     model_clf.to(self.device)
                     clfs["m%d" % m] = model_clf
                 for m, clf in clfs.items():
